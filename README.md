@@ -17,6 +17,9 @@ This framework enables **comprehensive, line-by-line code analysis** of reposito
 - **Comprehensive**: Analyzes security, performance, concurrency, resilience, and architecture
 - **Factual**: Reports only verified issues with code evidence
 - **Actionable**: Provides concrete recommendations with code examples
+- **100% Complete**: Guarantees every finding is documented individually (no summarization)
+- **Chain of Thought**: Systematic 6-step analysis with confidence scoring for each finding
+- **Validated**: 3-phase enforcement mechanism ensures declared_count === actual_count
 
 ### What Problems Does It Solve?
 
@@ -25,6 +28,8 @@ This framework enables **comprehensive, line-by-line code analysis** of reposito
 3. **Scale**: Analyzes large repositories without missing critical issues
 4. **Efficiency**: Pattern scanning identifies hotspots for targeted deep analysis
 5. **Completeness**: Ensures 100% code coverage through systematic orchestration
+6. **AI Summarization**: Prevents AI from grouping findings ("8 SQL injections found" → lists all 8 with file:line)
+7. **Finding Loss**: 3-phase validation guarantees no findings are omitted during analysis
 
 ---
 
@@ -101,14 +106,19 @@ See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
 
 ## Workflow
 
-### 1. Discovery Phase (5 minutes)
+### Phase 0: Agent Instruction Briefing (2 minutes)
+- Load completeness enforcement rules into agent context
+- Configure 3-phase execution (Pre-Analysis Counting → Progressive Extraction → Output Validation)
+- Set anti-summarization constraints
+
+### Phase 1: Discovery (5 minutes)
 - Scan directory structure
 - Detect programming languages
 - Identify frameworks (Spring Boot, Django, Express, etc.)
 - Count files and lines of code
 - Generate project manifest
 
-### 2. Pattern Scanning (5 minutes)
+### Phase 2: Pattern Scanning (5 minutes)
 - Use `grep`/`ripgrep` for quick hotspot identification
 - Find SQL injection patterns
 - Find N+1 query patterns
@@ -116,8 +126,8 @@ See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
 - Find hardcoded secrets
 - Generate hotspot list
 
-### 3. Agent Execution (30-60 minutes)
-Run specialized agents in parallel:
+### Phase 3: Agent Execution (30-60 minutes)
+Run specialized agents in parallel with Chain of Thought reasoning:
 - **Security Agent**: Authentication, authorization, input validation, cryptography
 - **Performance Agent**: Database queries, algorithms, caching, transactions
 - **Concurrency Agent**: Thread safety, race conditions, deadlocks, resource leaks
@@ -125,17 +135,28 @@ Run specialized agents in parallel:
 - **Resilience Agent**: Timeouts, circuit breakers, retries, bulkheads
 - **Architecture Agent**: Dependency violations, coupling, god classes
 
-### 4. Result Assembly (5 minutes)
+Each agent follows:
+1. Pre-Analysis Counting: Declare expected finding count by category
+2. Progressive Extraction: Report progress every 10% with specific finding IDs
+3. Output Validation: Verify declared_count === actual_count
+
+### Phase 4: Result Assembly (5 minutes)
 - Merge findings from all agents
 - Deduplicate using canonical hashes
 - Prioritize by severity (CRITICAL → HIGH → MEDIUM → LOW)
 - Generate statistics
 
-### 5. Report Generation (5 minutes)
+### Phase 5: Report Generation (5 minutes)
 - Create professional markdown report
 - Include code evidence for each finding
 - Provide actionable recommendations
 - Add quick wins section
+
+### Phase 5.5: Agent Output Validation (Automatic)
+- Validate: `declared_count === actual_count`
+- Check: No ID gaps, no placeholders, no summarization keywords
+- Verify: All required fields present (file, line, code_snippet, description)
+- If validation fails: Re-run agent with corrected instructions
 
 **Total Time**: 50-80 minutes for comprehensive analysis
 
@@ -143,12 +164,21 @@ Run specialized agents in parallel:
 
 ## Documentation
 
+### For AI Models (Read in This Order)
+
 | Document | Description |
 |----------|-------------|
-| [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) | Complete framework methodology, tactical approaches, and orchestration |
-| [AGENT-PROMPTS.md](AGENT-PROMPTS.md) | Prompt templates for all specialized agents |
+| **[START-HERE.md](START-HERE.md)** | **🎯 START HERE** - Reading guide for AI models with mandatory reading order |
+| [COMPLETENESS-ENFORCEMENT.md](COMPLETENESS-ENFORCEMENT.md) | 3-phase validation system to prevent summarization and ensure 100% finding documentation |
+| [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) | Complete framework methodology with Phase 0-6 workflow and validation |
+| [AGENT-PROMPTS.md](AGENT-PROMPTS.md) | Agent templates with Chain of Thought reasoning and completeness enforcement |
+
+### For Humans
+
+| Document | Description |
+|----------|-------------|
+| [QUICK-START.md](QUICK-START.md) | Step-by-step guide with real examples for running analyses |
 | [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) | Language-specific patterns for Java, Python, JavaScript |
-| [QUICK-START.md](QUICK-START.md) | Step-by-step guide with real examples |
 
 ---
 
@@ -256,6 +286,32 @@ See [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) for adding new languages.
 ---
 
 ## Key Concepts
+
+### Completeness Enforcement (NEW in v2.1)
+**3-phase validation system** guarantees 100% finding documentation:
+- **Phase 1**: Pre-Analysis Counting - Agent declares expected finding count before analyzing
+- **Phase 2**: Progressive Extraction - Agent reports progress every 10% with specific IDs
+- **Phase 3**: Output Validation - Verify `declared_count === actual_count`
+
+**Anti-Summarization**: Prevents "Found 8 SQL injections" → Forces listing all 8 individually with file:line.
+
+### Chain of Thought Reasoning (NEW in v2.1)
+Each finding analyzed through **6-step systematic process**:
+1. **Observation**: What code pattern exists?
+2. **Analysis**: Why is this problematic?
+3. **Context**: What makes it exploitable/problematic?
+4. **Impact**: What are the consequences?
+5. **Alternative Explanations**: Could this be a false positive?
+6. **Confidence**: 90%+, 70-90%, 50-70%, or <50%
+
+### Role-Based Agent Personas (NEW in v2.1)
+Each agent has specific identity and expertise:
+- **Alex "Paranoid" Rodriguez** - Security Agent (12+ years AppSec)
+- **Maria "Profiler" Chen** - Performance Agent (15+ years DB optimization)
+- **David "Parallel" Kumar** - Concurrency Agent (10+ years race conditions)
+- **Sarah "ORM Whisperer" Patel** - JPA/Hibernate Agent (12+ years Hibernate)
+- **James "Failover" Martinez** - Resilience Agent (10+ years fault-tolerance)
+- **Emily "Architect" Zhang** - Architecture Agent (15+ years clean architecture)
 
 ### Semantic Segmentation
 Split code by **architectural layers** (controller, service, DAO) rather than arbitrary file counts. Maintains context and reduces token usage.
@@ -375,6 +431,11 @@ concurrency:
 - ✅ Provide code evidence for every finding
 - ✅ Include actionable recommendations
 - ✅ Track findings over time
+- ✅ **Count findings before analyzing** (Pre-Analysis Counting phase)
+- ✅ **Report progress every 10%** during extraction
+- ✅ **List every finding individually** - never group or summarize
+- ✅ **Include validation block** in output JSON
+- ✅ **Use Chain of Thought reasoning** for each finding
 
 ### Don't:
 - ❌ Skip discovery - you'll miss context
@@ -384,6 +445,9 @@ concurrency:
 - ❌ Ignore framework-specific optimizations
 - ❌ Assume technologies not explicitly found
 - ❌ Create findings based on opinions
+- ❌ **Summarize findings** (e.g., "8 SQL injections found" - list all 8!)
+- ❌ **Skip pre-analysis counting** - declare expected finding count first
+- ❌ **Omit validation block** - always include validation in output JSON
 
 ---
 
@@ -458,6 +522,29 @@ Adjust in agent prompts.
 
 See [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) for template.
 
+### What is the Completeness Enforcement mechanism?
+
+The **3-phase validation system** that guarantees 100% finding documentation:
+
+1. **Phase 1 - Pre-Analysis Counting**: Agent must count and declare expected findings BEFORE analyzing
+2. **Phase 2 - Progressive Extraction**: Agent reports progress every 10% with specific finding IDs
+3. **Phase 3 - Output Validation**: Automated check ensures `declared_count === actual_count`
+
+This prevents AI from summarizing findings (e.g., "8 SQL injections found" without listing all 8).
+
+### What is Chain of Thought reasoning?
+
+Each finding is analyzed through a **6-step systematic process**:
+
+1. **Observation**: What code pattern exists?
+2. **Analysis**: Why is this problematic?
+3. **Context**: What makes it exploitable/problematic?
+4. **Impact**: What are the consequences?
+5. **Alternative Explanations**: Could this be a false positive?
+6. **Confidence**: Assign 90%+, 70-90%, 50-70%, or <50% confidence level
+
+This ensures thorough, factual analysis with clear reasoning for each finding.
+
 ---
 
 ## License
@@ -487,14 +574,31 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
 
 ---
 
-**Version**: 2.0
+**Version**: 2.1
 **Last Updated**: 2025-10-11
 **Maintained By**: Code Review Framework Community
+
+### What's New in v2.1
+
+- ✨ **START-HERE.md**: Mandatory reading guide for AI models
+- ✨ **Completeness Enforcement**: 3-phase validation system preventing summarization
+- ✨ **Chain of Thought Reasoning**: 6-step systematic analysis for each finding
+- ✨ **Agent Personas**: Role-based identities with specific expertise
+- ✨ **Output Validation**: Automated check ensuring `declared_count === actual_count`
+- ✨ **Bash Toolkits**: Efficient grep patterns for each agent
+- ✨ **Confidence Scoring**: 4-tier confidence levels for all findings
 
 ---
 
 ## Getting Started
 
+### For AI Models
+1. **Read [START-HERE.md](START-HERE.md) FIRST** - Mandatory reading order for AI
+2. Read [COMPLETENESS-ENFORCEMENT.md](COMPLETENESS-ENFORCEMENT.md) - Learn 3-phase validation
+3. Review [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) - Overall workflow
+4. Study [AGENT-PROMPTS.md](AGENT-PROMPTS.md) - Agent templates and examples
+
+### For Humans
 1. Read [QUICK-START.md](QUICK-START.md) for hands-on tutorial
 2. Review [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) for methodology
 3. Check [AGENT-PROMPTS.md](AGENT-PROMPTS.md) for prompt templates
