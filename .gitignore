@@ -1,0 +1,40 @@
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary analysis files (if users run analysis in this directory)
+manifest.json
+hotspots.json
+findings-*.json
+*-output.txt
+CODE_REVIEW_REPORT.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Java
+target/
+*.class
+*.jar
+*.war
+
+# Logs
+*.log
+logs/
