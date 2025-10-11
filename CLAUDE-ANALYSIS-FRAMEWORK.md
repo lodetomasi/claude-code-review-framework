@@ -69,6 +69,21 @@ This framework enables **line-by-line code analysis** of repositories of any siz
 
 ## WORKFLOW
 
+### Phase 0: Agent Instruction Briefing
+
+**CRITICAL**: All agents MUST follow the **COMPLETENESS ENFORCEMENT RULES** defined in `COMPLETENESS-ENFORCEMENT.md`.
+
+**Three-Phase Execution**:
+1. **Pre-Analysis Counting**: Agents must declare expected finding count BEFORE analyzing
+2. **Progressive Extraction**: Report progress every 10% with specific finding IDs
+3. **Output Validation**: Ensure `declared_count === actual_count`
+
+**Key Requirement**: Document EVERY finding individually - NO summarization or grouping statements like "8 SQL injection vulnerabilities found".
+
+**See**: `COMPLETENESS-ENFORCEMENT.md` for full specification and `AGENT-PROMPTS.md` for integrated agent templates.
+
+---
+
 ### Phase 1: Discovery (5-10 minutes)
 
 **Goal**: Map the entire codebase structure without analyzing content
@@ -216,6 +231,13 @@ Each agent receives:
 2. **Hotspots** - Prioritized file list for their domain
 3. **Layer Assignment** - Specific architectural layer to analyze
 4. **Context** - Cross-references to other layers (e.g., service → repository calls)
+5. **Completeness Rules** - Mandatory enforcement instructions (Phase 0)
+
+**Validation Requirements**:
+- Agent output MUST include `analysis_metadata` with `declared_count` and `actual_count`
+- Output MUST include `validation` block confirming completeness
+- Orchestrator MUST validate `declared_count === actual_count` before accepting results
+- Any summarization detected = output REJECTED, agent must re-run
 
 **Example Agent Prompt**:
 
@@ -243,27 +265,43 @@ Analyze the controller and integration layers for:
 - Insecure deserialization
 
 ## Output Format
-Return JSON array of findings:
-[
-  {
-    "id": "SEC-CRIT-001",
-    "type": "SECURITY",
-    "severity": "CRITICAL",
-    "category": "SQL_INJECTION",
-    "file": "path/to/file.java",
-    "line": 123,
-    "evidence": "actual code snippet",
-    "description": "SQL query built with string concatenation",
-    "impact": "Attacker can execute arbitrary SQL",
-    "recommendation": "Use PreparedStatement with parameterized queries"
+Return JSON object with metadata and findings array:
+{
+  "analysis_metadata": {
+    "agent_type": "security",
+    "declared_count": XX,
+    "actual_count": XX,
+    "completeness": "100%",
+    "status": "COMPLETE"
+  },
+  "findings": [
+    {
+      "id": "SEC-001",
+      "type": "SECURITY",
+      "severity": "CRITICAL",
+      "category": "SQL_INJECTION",
+      "file": "path/to/file.java",
+      "line": 123,
+      "evidence": "actual code snippet",
+      "description": "SQL query built with string concatenation",
+      "impact": "Attacker can execute arbitrary SQL",
+      "recommendation": "Use PreparedStatement with parameterized queries"
+    }
+  ],
+  "validation": {
+    "id_sequence_valid": true,
+    "no_duplicates": true,
+    "all_have_evidence": true,
+    "all_have_recommendations": true,
+    "counts_match": true
   }
-]
+}
 
 ## Constraints
 - Token budget: 40,000
-- Max findings: 100
 - Priority: CRITICAL > HIGH > MEDIUM > LOW
-- If you find >100 issues, return only CRITICAL and HIGH
+- **MANDATORY**: Follow COMPLETENESS ENFORCEMENT - document ALL findings individually
+- **NO SUMMARIZATION**: Never group findings (e.g., "8 SQL injections found")
 ```
 
 ---
@@ -495,6 +533,80 @@ SEVERITY = {
 ```
 
 **Output**: `findings-deduplicated.json`
+
+---
+
+### Phase 5.5: Agent Output Validation
+
+**Goal**: Ensure every agent output meets completeness requirements before assembly
+
+**Validation Script** (run after each agent completes):
+
+```python
+def validate_agent_output(output_json, agent_name):
+    """Validate agent output for completeness"""
+
+    # Check metadata exists
+    if 'analysis_metadata' not in output_json:
+        raise ValueError(f"{agent_name}: Missing analysis_metadata")
+
+    metadata = output_json['analysis_metadata']
+    findings = output_json['findings']
+
+    # Check counts match
+    declared = metadata.get('declared_count', 0)
+    actual = len(findings)
+
+    if actual < declared:
+        raise ValueError(
+            f"{agent_name}: INCOMPLETE - Declared {declared} findings "
+            f"but only {actual} extracted. Missing {declared - actual} findings!"
+        )
+
+    # Check ID sequence
+    ids = [f['id'] for f in findings]
+    prefix = agent_name[:3].upper()
+    expected_ids = [f"{prefix}-{i:03d}" for i in range(1, actual + 1)]
+
+    missing_ids = set(expected_ids) - set(ids)
+    if missing_ids:
+        raise ValueError(
+            f"{agent_name}: ID sequence broken. Missing IDs: {missing_ids}"
+        )
+
+    # Check for placeholders/summarization
+    for finding in findings:
+        desc = finding.get('description', '')
+        if any(phrase in desc.lower() for phrase in ['...', 'etc', 'and others', 'similar']):
+            raise ValueError(
+                f"{agent_name}: Summarization detected in {finding['id']}: {desc}"
+            )
+
+        # Check all required fields
+        required = ['id', 'type', 'severity', 'file', 'line', 'evidence', 'description']
+        missing = [field for field in required if field not in finding or not finding[field]]
+        if missing:
+            raise ValueError(
+                f"{agent_name}: {finding['id']} missing required fields: {missing}"
+            )
+
+    # Check validation block
+    validation = output_json.get('validation', {})
+    if not all(validation.values()):
+        failed = [k for k, v in validation.items() if not v]
+        raise ValueError(
+            f"{agent_name}: Validation failed for: {failed}"
+        )
+
+    print(f"✅ {agent_name}: Validation PASSED - {actual} findings documented")
+    return True
+```
+
+**Integration**:
+- Run validation immediately after each agent completes
+- Log validation failures for debugging
+- Reject incomplete outputs and re-run agent with stricter instructions
+- Only proceed to deduplication after ALL agents pass validation
 
 ---
 
@@ -1117,6 +1229,13 @@ If a layer exceeds token budget:
 
 Before finalizing report:
 
+### Completeness Enforcement
+- [ ] All agents passed Phase 5.5 validation (declared_count === actual_count)
+- [ ] No summarization detected in any agent output
+- [ ] All finding IDs sequential without gaps
+- [ ] All findings have complete required fields
+
+### Standard Validation
 - [ ] All files in manifest analyzed or explicitly skipped
 - [ ] Every finding has file:line reference
 - [ ] Every finding has code evidence

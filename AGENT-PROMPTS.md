@@ -47,25 +47,42 @@ These files REQUIRE deep analysis (found via grep):
 - Report ONLY factual findings with code evidence
 - NO assumptions - if unclear, state "Not determinable from code"
 - Output JSON format (schema below)
-- If you find >100 issues, prioritize CRITICAL and HIGH only
+- **MANDATORY**: Follow the COMPLETENESS ENFORCEMENT RULES (see below)
+- Document EVERY finding individually - NO summarization or grouping
 
 ## Output Format
-Return a JSON array of findings using this schema:
+Return a JSON object with analysis metadata and findings array using this schema:
 ```json
-[
-  {
-    "id": "CATEGORY-SEVERITY-NNN",
-    "type": "SECURITY|PERFORMANCE|QUALITY|ARCHITECTURE",
-    "severity": "CRITICAL|HIGH|MEDIUM|LOW",
-    "category": "[specific category]",
-    "file": "path/to/file.ext",
-    "line": 123,
-    "evidence": "actual code snippet (max 10 lines)",
-    "description": "Factual description of what was found",
-    "impact": "Concrete impact (performance degradation, security risk, etc.)",
-    "recommendation": "Actionable fix with code example if applicable"
+{
+  "analysis_metadata": {
+    "agent_type": "[security|performance|concurrency|jpa|resilience|architecture]",
+    "declared_count": XX,
+    "actual_count": XX,
+    "completeness": "100%",
+    "status": "COMPLETE"
+  },
+  "findings": [
+    {
+      "id": "XXX-001",
+      "type": "SECURITY|PERFORMANCE|QUALITY|ARCHITECTURE",
+      "severity": "CRITICAL|HIGH|MEDIUM|LOW",
+      "category": "[specific category]",
+      "file": "path/to/file.ext",
+      "line": 123,
+      "evidence": "actual code snippet (max 10 lines)",
+      "description": "Factual description of what was found",
+      "impact": "Concrete impact (performance degradation, security risk, etc.)",
+      "recommendation": "Actionable fix with code example if applicable"
+    }
+  ],
+  "validation": {
+    "id_sequence_valid": true,
+    "no_duplicates": true,
+    "all_have_evidence": true,
+    "all_have_recommendations": true,
+    "counts_match": true
   }
-]
+}
 ```
 
 ## Severity Guidelines
@@ -74,6 +91,156 @@ Return a JSON array of findings using this schema:
 - **MEDIUM**: Code quality issues, minor performance concerns, maintainability
 - **LOW**: Style improvements, minor optimizations, documentation
 ```
+
+---
+
+## COMPLETENESS ENFORCEMENT RULES
+
+**CRITICAL**: You MUST follow this THREE-PHASE process to ensure 100% finding documentation.
+
+```markdown
+### PHASE 1: PRE-ANALYSIS COUNTING (MANDATORY)
+
+Before analyzing ANY code, complete this count table:
+
+| Finding Category | Files to Scan | Expected Count | Priority |
+|------------------|---------------|----------------|----------|
+| [Category 1]     | X files       | ~Y findings    | CRITICAL |
+| [Category 2]     | Z files       | ~W findings    | HIGH     |
+| ...              | ...           | ...            | ...      |
+| **TOTAL**        | **N files**   | **~M findings**| **ALL**  |
+
+**Output Format**:
+```json
+{
+  "pre_analysis_count": {
+    "declared_finding_count": M,
+    "files_to_analyze": N,
+    "categories": {
+      "CATEGORY_1": Y,
+      "CATEGORY_2": W
+    }
+  }
+}
+```
+
+---
+
+### PHASE 2: EXTRACTION WITH PROGRESS TRACKING (MANDATORY)
+
+As you extract findings, report progress every 10%:
+
+```
+[10%] X/M findings extracted
+  ├─ ID-001: Description in file.ext:line
+  ├─ ID-002: Description in file.ext:line
+  ...
+
+[20%] X/M findings extracted
+  ...
+
+[100%] M/M findings extracted ✓ COMPLETE
+```
+
+**Rules**:
+- Report progress every 10% (or every 10 findings, whichever comes first)
+- List the specific finding IDs extracted in each batch
+- Final count MUST match declared count from Phase 1
+- If you find MORE than declared, UPDATE the count and continue
+- If you find LESS, explain which categories had fewer findings
+
+---
+
+### PHASE 3: OUTPUT VALIDATION (MANDATORY)
+
+Your final output MUST pass these validations:
+
+```json
+{
+  "analysis_metadata": {
+    "agent_type": "your-agent-type",
+    "declared_count": M,
+    "actual_count": M,
+    "completeness": "100%",
+    "status": "COMPLETE"
+  },
+  "findings": [
+    { "id": "XXX-001", ... },
+    { "id": "XXX-002", ... },
+    // ... EXACTLY M findings
+    { "id": "XXX-MMM", ... }
+  ],
+  "validation": {
+    "id_sequence_valid": true,
+    "no_duplicates": true,
+    "all_have_evidence": true,
+    "all_have_recommendations": true,
+    "counts_match": true
+  }
+}
+```
+
+**REJECTION CRITERIA** (if ANY is true, output is INVALID):
+
+❌ `findings.length < declared_count` → **INCOMPLETE**
+❌ Any finding missing required fields → **INVALID SCHEMA**
+❌ ID gaps (e.g., SEC-005 exists but SEC-004 missing) → **SEQUENCE ERROR**
+❌ Any placeholder text like "...", "etc.", "and others" → **SUMMARIZATION DETECTED**
+❌ Any statement like "similar issues in 5 other files" → **VIOLATION**
+
+---
+
+### ANTI-SUMMARIZATION EXAMPLES
+
+#### ❌ WRONG (Summarization detected):
+
+```json
+{
+  "id": "PERF-001",
+  "description": "N+1 query patterns found in 8 service files"
+}
+```
+
+**Problem**: No individual findings for each of the 8 files!
+
+#### ✅ CORRECT (Individual documentation):
+
+```json
+[
+  {
+    "id": "PERF-001",
+    "file": "UserService.java",
+    "line": 45,
+    "description": "N+1 query - fetching users then orders in loop"
+  },
+  {
+    "id": "PERF-002",
+    "file": "OrderService.java",
+    "line": 89,
+    "description": "N+1 query - fetching orders then items in loop"
+  },
+  {
+    "id": "PERF-003",
+    "file": "ProductService.java",
+    "line": 123,
+    "description": "N+1 query - fetching products then reviews in loop"
+  },
+  // ... CONTINUE FOR ALL 8 FILES
+  {
+    "id": "PERF-008",
+    "file": "ReportService.java",
+    "line": 456,
+    "description": "N+1 query - fetching reports then attachments in loop"
+  }
+]
+```
+
+---
+
+## END OF COMPLETENESS ENFORCEMENT RULES
+```
+
+**Integrate these rules into your agent execution BEFORE starting analysis.**
 
 ---
 
@@ -88,6 +255,22 @@ Return a JSON array of findings using this schema:
 Identify security vulnerabilities across authentication, authorization, input validation, data protection, and dependency security.
 
 [Include Universal Context Block]
+
+---
+
+## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+
+**YOU MUST EXECUTE IN THREE PHASES:**
+
+1. **PHASE 1**: Pre-Analysis Counting - Declare expected finding count BEFORE analyzing
+2. **PHASE 2**: Progressive Extraction - Report progress every 10% with finding IDs
+3. **PHASE 3**: Output Validation - Ensure declared_count === actual_count
+
+**See COMPLETENESS ENFORCEMENT RULES section for full details.**
+
+**CRITICAL**: Document EVERY finding individually. NO statements like "8 SQL injection vulnerabilities found" - list all 8 separately with file:line evidence.
+
+---
 
 ## Analysis Checklist
 
@@ -275,6 +458,22 @@ session({ secret: '123456' })  // WEAK SECRET!
 Identify performance bottlenecks in database queries, algorithms, caching, and resource usage.
 
 [Include Universal Context Block]
+
+---
+
+## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+
+**YOU MUST EXECUTE IN THREE PHASES:**
+
+1. **PHASE 1**: Pre-Analysis Counting - Declare expected finding count BEFORE analyzing
+2. **PHASE 2**: Progressive Extraction - Report progress every 10% with finding IDs
+3. **PHASE 3**: Output Validation - Ensure declared_count === actual_count
+
+**See COMPLETENESS ENFORCEMENT RULES section for full details.**
+
+**CRITICAL**: Document EVERY finding individually. NO statements like "N+1 query patterns found in 8 service files" - list all 8 separately with file:line evidence.
+
+---
 
 ## Analysis Checklist
 
@@ -533,6 +732,22 @@ When possible, estimate performance impact:
 Identify race conditions, deadlocks, thread pool mismanagement, and shared state concurrency issues.
 
 [Include Universal Context Block]
+
+---
+
+## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+
+**YOU MUST EXECUTE IN THREE PHASES:**
+
+1. **PHASE 1**: Pre-Analysis Counting - Declare expected finding count BEFORE analyzing
+2. **PHASE 2**: Progressive Extraction - Report progress every 10% with finding IDs
+3. **PHASE 3**: Output Validation - Ensure declared_count === actual_count
+
+**See COMPLETENESS ENFORCEMENT RULES section for full details.**
+
+**CRITICAL**: Document EVERY finding individually. NO statements like "Race conditions found in 5 service classes" - list all 5 separately with file:line evidence.
+
+---
 
 ## Analysis Checklist
 
@@ -818,6 +1033,22 @@ Deep analysis of JPA/Hibernate configuration, entity relationships, and query op
 
 [Include Universal Context Block]
 
+---
+
+## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+
+**YOU MUST EXECUTE IN THREE PHASES:**
+
+1. **PHASE 1**: Pre-Analysis Counting - Declare expected finding count BEFORE analyzing
+2. **PHASE 2**: Progressive Extraction - Report progress every 10% with finding IDs
+3. **PHASE 3**: Output Validation - Ensure declared_count === actual_count
+
+**See COMPLETENESS ENFORCEMENT RULES section for full details.**
+
+**CRITICAL**: Document EVERY finding individually. NO statements like "111 relationships missing @BatchSize" - list ALL 111 separately with entity:line evidence.
+
+---
+
 ## Analysis Checklist
 
 ### 1. Entity Inventory
@@ -1094,6 +1325,22 @@ For comprehensive reports, include entity inventory:
 Analyze timeout configurations, circuit breakers, retry policies, and bulkheads for external service integrations.
 
 [Include Universal Context Block]
+
+---
+
+## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+
+**YOU MUST EXECUTE IN THREE PHASES:**
+
+1. **PHASE 1**: Pre-Analysis Counting - Declare expected finding count BEFORE analyzing
+2. **PHASE 2**: Progressive Extraction - Report progress every 10% with finding IDs
+3. **PHASE 3**: Output Validation - Ensure declared_count === actual_count
+
+**See COMPLETENESS ENFORCEMENT RULES section for full details.**
+
+**CRITICAL**: Document EVERY finding individually. NO statements like "15 Feign clients missing circuit breakers" - list all 15 separately with client:line evidence.
+
+---
 
 ## Analysis Checklist
 
