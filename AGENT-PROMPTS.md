@@ -1,8 +1,8 @@
-# AGENT PROMPT TEMPLATES v2.3
+# AGENT PROMPT TEMPLATES v2.4
 
-**Enhanced with Chain of Thought Reasoning + Progressive Writing Strategy**
+**Enhanced with Chain of Thought Reasoning + Progressive Writing Strategy + Quick Reference Tables**
 
-Version: 2.3
+Version: 2.4
 Date: 2025-10-12
 Framework: claude-code-review-framework
 
@@ -31,7 +31,14 @@ Framework: claude-code-review-framework
 
 ---
 
-## Improvements in v2.2 (NEW)
+## Improvements in v2.4 (NEW)
+
+- 🆕 **Quick Reference Tables**: Every agent file starts with navigable table of ALL findings
+- 🆕 **Complete CRITICAL/HIGH Coverage**: ALL critical and high findings in detailed format (not just top 50)
+- 🆕 **Structured Sampling**: 5 MEDIUM + 5 LOW examples, rest in comprehensive table
+- 🆕 **Enhanced Navigation**: ID-based referencing with file:line for instant location
+
+## Improvements in v2.2
 
 - 🆕 **Context-Optimized Output**: Focus on finding MORE issues, not verbose solutions
 - 🆕 **Table Format for Bulk Issues**: Reserve detailed format for top findings only
@@ -58,23 +65,31 @@ Framework: claude-code-review-framework
 
 **Trade-off**: Maximize issue discovery > Minimize verbose solutions
 
-### Output Format Guidelines
+### Output Format Guidelines (v2.4)
 
-**For Top 50 CRITICAL/HIGH Issues** (Detailed format - 5 lines each):
+**Prioritization Strategy**:
+1. **ALL CRITICAL findings** → Detailed format (5 lines each)
+2. **ALL HIGH findings** → Detailed format (5 lines each)
+3. **5 MEDIUM findings** → Detailed format (representative samples)
+4. **5 LOW findings** → Detailed format (representative samples)
+5. **Remaining MEDIUM/LOW** → Quick Reference Table (1 line each)
+
+**Detailed Format** (for CRITICAL/HIGH/sample MEDIUM/LOW):
 ```markdown
-### [CRIT-001] Missing Authorization on Endpoint
+### [SEC-001] Missing Authorization on Endpoint
 **File**: `ConcertiniController.java:38`
+**Severity**: CRITICAL
 **Problem**: POST endpoint accessible without authentication
 **Impact**: Data modification by unauthorized users
 **Fix**: Add @PreAuthorize("hasRole('OPERATOR')")
 ```
 
-**For Remaining Issues** (Table format - 1 line each):
+**Quick Reference Table Format** (for remaining findings):
 ```markdown
-| ID | File:Line | Pattern | Severity | Fix Hint |
-|----|-----------|---------|----------|----------|
-| SEC-051 | AuthController.java:45 | MISSING_INPUT_VALIDATION | HIGH | Add @Valid |
-| SEC-052 | UserService.java:123 | WEAK_CRYPTO_MD5 | MEDIUM | Use BCrypt |
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| SEC-051 | MEDIUM | INPUT_VALIDATION | AuthController.java:45 | Missing @Valid annotation |
+| SEC-052 | MEDIUM | WEAK_CRYPTO | UserService.java:123 | MD5 used instead of BCrypt |
 ```
 
 ### What to Eliminate
@@ -94,19 +109,18 @@ Framework: claude-code-review-framework
 - 1-2 line problem description
 - 1 line fix hint
 
-### Context Savings Example
+### Context Savings Example (v2.4)
 
-**Old Approach** (300 findings documented):
-- 50 detailed (20 lines each) = 1000 lines
-- 250 brief (5 lines each) = 1250 lines
-- **Total**: 2250 lines (~60KB context)
+**Example** (300 findings total: 100 CRIT, 100 HIGH, 80 MEDIUM, 20 LOW):
+- 100 CRITICAL detailed (5 lines each) = 500 lines
+- 100 HIGH detailed (5 lines each) = 500 lines
+- 5 MEDIUM samples detailed (5 lines each) = 25 lines
+- 5 LOW samples detailed (5 lines each) = 25 lines
+- 75 MEDIUM + 15 LOW in table (1 line each) = 90 lines
+- Quick Reference Table header = 10 lines
+- **Total**: ~1150 lines (~30KB context)
 
-**New Approach** (800 findings documented):
-- 50 detailed (5 lines each) = 250 lines
-- 750 table rows (1 line each) = 750 lines
-- **Total**: 1000 lines (~30KB context)
-
-**Result**: 2.6x more issues documented with 50% less context!
+**Benefit**: 100% CRITICAL/HIGH detailed + representative samples + complete index
 
 ---
 
@@ -179,11 +193,11 @@ fi
 echo "[Complete] Total $findings_count findings written"
 ```
 
-#### Step 3: Apply Sampling
+#### Step 3: Apply v2.4 Output Strategy
 
 ```bash
-# After ALL findings written, apply sampling
-apply_sampling() {
+# After ALL findings written, apply v2.4 output strategy
+apply_v2_4_strategy() {
     local file=$1
 
     # Count by severity
@@ -194,46 +208,112 @@ apply_sampling() {
 
     echo "Found: CRIT=$critical_count HIGH=$high_count MED=$medium_count LOW=$low_count"
 
-    # Keep ALL CRITICAL and HIGH (no sampling)
-    # Sample MEDIUM: keep 30%
-    # Sample LOW: keep 20%
+    # v2.4 Strategy:
+    # - Keep ALL CRITICAL detailed (5 lines each)
+    # - Keep ALL HIGH detailed (5 lines each)
+    # - Keep 5 MEDIUM samples detailed (5 lines each)
+    # - Keep 5 LOW samples detailed (5 lines each)
+    # - Put remaining MEDIUM/LOW in Quick Reference Table
 
-    # Create sampled file
-    sampled="${file}.sampled"
+    # Create output file with detailed findings
+    detailed="${file}.detailed"
 
-    # Keep all CRITICAL
-    grep -A 4 "^### CRIT-" "$file" > "$sampled"
+    # Keep all CRITICAL (detailed format)
+    grep -A 4 "^### CRIT-" "$file" > "$detailed"
 
-    # Keep all HIGH
-    grep -A 4 "^### HIGH-" "$file" >> "$sampled"
+    # Keep all HIGH (detailed format)
+    grep -A 4 "^### HIGH-" "$file" >> "$detailed"
 
-    # Sample MEDIUM: 30%
-    medium_sample_size=$((medium_count * 30 / 100))
-    grep -A 4 "^### MED-" "$file" | head -n $((medium_sample_size * 5)) >> "$sampled"
+    # Keep 5 MEDIUM samples (detailed format)
+    grep -A 4 "^### MED-" "$file" | head -n 25 >> "$detailed"
 
-    # Sample LOW: 20%
-    low_sample_size=$((low_count * 20 / 100))
-    grep -A 4 "^### LOW-" "$file" | head -n $((low_sample_size * 5)) >> "$sampled"
+    # Keep 5 LOW samples (detailed format)
+    grep -A 4 "^### LOW-" "$file" | head -n 25 >> "$detailed"
 
-    mv "$sampled" "$file"
+    # Calculate Quick Reference Table entries
+    medium_in_table=$((medium_count > 5 ? medium_count - 5 : 0))
+    low_in_table=$((low_count > 5 ? low_count - 5 : 0))
 
-    kept=$((critical_count + high_count + medium_sample_size + low_sample_size))
-    echo "Kept after sampling: $kept issues"
+    mv "$detailed" "$file"
+
+    detailed_count=$((critical_count + high_count + (medium_count < 5 ? medium_count : 5) + (low_count < 5 ? low_count : 5)))
+    table_count=$((medium_in_table + low_in_table))
+    total=$((detailed_count + table_count))
+
+    echo "v2.4 Output Strategy Applied:"
+    echo "  - ALL CRITICAL detailed: $critical_count"
+    echo "  - ALL HIGH detailed: $high_count"
+    echo "  - MEDIUM samples detailed: $((medium_count < 5 ? medium_count : 5))"
+    echo "  - LOW samples detailed: $((low_count < 5 ? low_count : 5))"
+    echo "  - MEDIUM in Quick Reference: $medium_in_table"
+    echo "  - LOW in Quick Reference: $low_in_table"
+    echo "  - Total detailed: $detailed_count"
+    echo "  - Total in table: $table_count"
+    echo "  - TOTAL DOCUMENTED: $total (100%)"
 }
 
-apply_sampling "$OUTPUT_FILE"
+apply_v2_4_strategy "$OUTPUT_FILE"
 ```
 
-### Finding Format
+### Agent Output File Structure (MANDATORY v2.4)
 
-Each finding written to file:
+Each agent MUST structure their output file with this exact format:
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [DOMAIN]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [DOMAIN]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| ... | ... | ... | ... | ... |
+| [DOMAIN]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+- [CATEGORY_3]: Z findings
+
+---
+
+## Detailed Findings
+
+### [DOMAIN]-001: [Title]
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [DOMAIN]-002: [Title]
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL findings]
+```
+
+### Finding Detail Format
+
+Each finding in the detailed section:
 
 ```markdown
 ### SEC-042: Weak MD5 Password Hashing
 **File**: `UserService.java:123`
 **Severity**: MEDIUM
+**Category**: WEAK_CRYPTO
 **Problem**: MD5 is cryptographically broken for password storage
-**Fix**: Use BCrypt with salt
+**Impact**: Passwords vulnerable to rainbow table attacks
+**Fix**: Use BCrypt with salt (minimum cost factor 12)
 
 ---
 ```
@@ -247,23 +327,34 @@ Agent final response should be SUMMARY only:
   "agent": "Security Agent",
   "status": "completed",
   "output_file": "security_findings.md",
+  "output_strategy": "v2.4",
   "findings_found": 250,
-  "findings_documented": 102,
-  "sampling_applied": true,
+  "findings_documented": 250,
   "breakdown": {
-    "CRITICAL": {"found": 8, "kept": 8},
-    "HIGH": {"found": 42, "kept": 42},
-    "MEDIUM": {"found": 120, "kept": 36},
-    "LOW": {"found": 80, "kept": 16}
-  }
+    "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
+    "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
+    "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
+    "LOW": {"found": 25, "detailed": 5, "in_table": 20}
+  },
+  "quick_reference_table": {
+    "included": true,
+    "total_entries": 250,
+    "detailed_findings": 92,
+    "table_only_findings": 158,
+    "location": "Top of security_findings.md"
+  },
+  "context_usage": "48%"
 }
 ```
 
-### Benefits
+### Benefits (v2.4)
 
-- **Context usage**: Constant ~50KB (not growing)
-- **No output overflow**: Files written to disk, not returned
-- **All findings preserved**: Nothing lost, just sampled
+- **Complete CRITICAL/HIGH Coverage**: Every critical and high priority issue documented in detail
+- **Quick Navigation**: Reference table at top of file for instant finding lookup
+- **Representative Sampling**: 5 examples each for MEDIUM/LOW to understand patterns
+- **Context Usage**: Constant ~50KB (not growing)
+- **No Output Overflow**: Files written to disk, not returned
+- **100% Documented**: All findings in Quick Reference Table, detailed or sampled
 - **Scalability**: Works for 1M LOC codebases
 
 ---

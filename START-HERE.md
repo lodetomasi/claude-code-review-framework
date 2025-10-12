@@ -1,7 +1,7 @@
 # START HERE - AI Model Reading Guide
 ## Claude Code Review Framework
 
-**Version**: 2.3
+**Version**: 2.4
 **Last Updated**: 2025-10-12
 **Audience**: AI Models (Claude, GPT, etc.) tasked with code review
 
@@ -197,8 +197,8 @@ Clear: File contents, duplicate patterns, boilerplate
 
 ---
 
-### Step 5.6 (⚠️ MANDATORY for >100K LOC - NEW v2.3): Progressive Writing Strategy
-**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Section: Progressive Writing v2.3)
+### Step 5.6 (⚠️ MANDATORY for >100K LOC - NEW v2.4): Progressive Writing Strategy
+**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Section: Progressive Writing v2.4)
 **Time**: 5 minutes
 **Purpose**: Solve the 32K output token limit for large-scale analysis
 **⚠️ READ BEFORE analyzing codebases with >100K LOC or 100+ expected findings**
@@ -234,12 +234,12 @@ for file in $(find . -name "*.java" | sort); do
 done
 ```
 
-**Agent Architecture**:
-- Each agent writes to **separate category file**:
-  - Security Agent → `security_findings.md`
-  - Performance Agent → `performance_findings.md`
-  - Concurrency Agent → `concurrency_findings.md`
-  - Architecture Agent → `architecture_findings.md`
+**Agent Architecture (v2.4)**:
+- Each agent writes to **separate category file** with **Quick Reference Table**:
+  - Security Agent → `security_findings.md` (with Quick Reference Table at top)
+  - Performance Agent → `performance_findings.md` (with Quick Reference Table at top)
+  - Concurrency Agent → `concurrency_findings.md` (with Quick Reference Table at top)
+  - Architecture Agent → `architecture_findings.md` (with Quick Reference Table at top)
 
 **Agent Returns Summary Only** (NOT full findings):
 ```json
@@ -247,29 +247,32 @@ done
   "agent": "Security Agent",
   "status": "completed",
   "output_file": "security_findings.md",
+  "output_strategy": "v2.4",
   "findings_found": 250,
-  "findings_documented": 102,
-  "sampling_applied": true,
-  "sampling_strategy": {
-    "CRITICAL": "ALL (50 documented)",
-    "HIGH": "ALL (32 documented)",
-    "MEDIUM": "30% sampled (15 of 50 documented)",
-    "LOW": "20% sampled (5 of 25 documented)"
+  "findings_documented": 250,
+  "breakdown": {
+    "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
+    "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
+    "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
+    "LOW": {"found": 25, "detailed": 5, "in_table": 20}
   }
 }
 ```
 
-**Key Benefits**:
+**Key Benefits (v2.4)**:
 - ✅ **Constant Memory**: Write → Clear → Context stays at ~50KB regardless of findings
 - ✅ **No Output Overflow**: Return 2KB summary instead of 40KB+ findings
 - ✅ **Scales to 1M+ LOC**: Write 10,000 findings without hitting limits
+- ✅ **100% Documented**: ALL findings preserved (not sampled/omitted)
+- ✅ **Quick Navigation**: Quick Reference Tables for instant location lookup
 - ✅ **67% Context Savings**: Proven on 138K LOC project (362+ findings)
 
-**Intelligent Sampling**:
-- **CRITICAL**: Document ALL (no omissions)
-- **HIGH**: Document ALL (no omissions)
-- **MEDIUM**: Sample top 30% by impact
-- **LOW**: Sample top 20% by frequency
+**v2.4 Output Strategy**:
+- **ALL CRITICAL**: Detailed format (5 lines each) - no omissions
+- **ALL HIGH**: Detailed format (5 lines each) - no omissions
+- **5 MEDIUM samples**: Detailed format (representative examples)
+- **5 LOW samples**: Detailed format (representative examples)
+- **Remaining MEDIUM/LOW**: Quick Reference Table (1 line each with ID, severity, category, file:line, brief description)
 
 **When to Use**:
 - Codebase >100K LOC
@@ -315,7 +318,7 @@ done
 
 ---
 
-#### Strategy B: Progressive Writing (Large Codebases) - v2.3
+#### Strategy B: Progressive Writing (Large Codebases) - v2.4
 
 **✅ Use when**:
 - Codebase > 100K LOC **OR**
@@ -323,11 +326,11 @@ done
 - When unsure (safest choice)
 
 **How it works**:
-1. Each agent writes to **separate category file** during analysis:
-   - Security Agent → `security_findings.md`
-   - Performance Agent → `performance_findings.md`
-   - Concurrency Agent → `concurrency_findings.md`
-   - Architecture Agent → `architecture_findings.md`
+1. Each agent writes to **separate category file** with **Quick Reference Table** during analysis:
+   - Security Agent → `security_findings.md` (Quick Reference Table + Detailed Findings)
+   - Performance Agent → `performance_findings.md` (Quick Reference Table + Detailed Findings)
+   - Concurrency Agent → `concurrency_findings.md` (Quick Reference Table + Detailed Findings)
+   - Architecture Agent → `architecture_findings.md` (Quick Reference Table + Detailed Findings)
 
 2. **Write-Clear-Continue pattern**:
    ```bash
@@ -340,11 +343,12 @@ done
            continue analysis
    ```
 
-3. Apply intelligent sampling:
-   - CRITICAL: Document ALL (no omissions)
-   - HIGH: Document ALL (no omissions)
-   - MEDIUM: Sample top 30% by impact
-   - LOW: Sample top 20% by frequency
+3. Apply **v2.4 output strategy** (100% documentation):
+   - ALL CRITICAL: Detailed format (5 lines each)
+   - ALL HIGH: Detailed format (5 lines each)
+   - 5 MEDIUM samples: Detailed format (representative examples)
+   - 5 LOW samples: Detailed format (representative examples)
+   - Remaining MEDIUM/LOW: Quick Reference Table (1 line with ID, severity, category, file:line, brief description)
 
 4. Agent returns **summary only** (2KB instead of 40KB+):
    ```json
@@ -352,13 +356,19 @@ done
      "agent": "Security Agent",
      "status": "completed",
      "output_file": "security_findings.md",
+     "output_strategy": "v2.4",
      "findings_found": 250,
-     "findings_documented": 102,
-     "sampling_applied": true
+     "findings_documented": 250,
+     "breakdown": {
+       "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
+       "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
+       "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
+       "LOW": {"found": 25, "detailed": 5, "in_table": 20}
+     }
    }
    ```
 
-**Pros**: Never exceeds token limits, scales to 1M+ LOC
+**Pros**: Never exceeds token limits, scales to 1M+ LOC, 100% findings documented, Quick Reference Tables for navigation
 **Cons**: Findings split across multiple files (minor inconvenience)
 
 ---
@@ -411,8 +421,8 @@ When you receive a code review request:
    - Declare total count
    - Output pre_analysis_count JSON
 
-✅ PHASE 2: PROGRESSIVE EXTRACTION (with Progressive Writing v2.3)
-   - Initialize output file: security_findings.md (or category-specific file)
+✅ PHASE 2: PROGRESSIVE EXTRACTION (with Progressive Writing v2.4)
+   - Initialize output file with Quick Reference Table: security_findings.md (or category-specific file)
    - For each finding:
      * Analyze and document
      * Write to file immediately
@@ -429,19 +439,20 @@ When you receive a code review request:
    ...
    [100%] Total/Total findings extracted ✓
 
-✅ PHASE 2.5: INTELLIGENT SAMPLING (for large finding sets)
-   - Apply sampling strategy:
-     * CRITICAL: Keep ALL
-     * HIGH: Keep ALL
-     * MEDIUM: Keep top 30% by impact
-     * LOW: Keep top 20% by frequency
-   - Document sampling metadata in output
+✅ PHASE 2.5: v2.4 OUTPUT STRATEGY (100% documentation)
+   - Apply v2.4 output format:
+     * CRITICAL: ALL detailed (5 lines each)
+     * HIGH: ALL detailed (5 lines each)
+     * MEDIUM: 5 samples detailed + rest in Quick Reference Table
+     * LOW: 5 samples detailed + rest in Quick Reference Table
+   - Generate Quick Reference Table at top of file (ALL findings indexed)
+   - Document output strategy metadata
 
 ✅ PHASE 3: OUTPUT VALIDATION
-   - Generate analysis_metadata with sampling info
+   - Generate analysis_metadata with v2.4 strategy breakdown
    - Return SUMMARY ONLY (not full findings - already written to file)
    - Generate validation block
-   - Verify: findings_found, findings_documented, sampling_applied
+   - Verify: findings_found, findings_documented, breakdown (detailed vs in_table counts)
 ```
 
 ### **After Analysis**
@@ -676,12 +687,15 @@ Focus: XSS, event loop blocking, async/await, prototype pollution
 ### Q: What if analysis would exceed token budget?
 **A**: **USE PROGRESSIVE WRITING STRATEGY** (Step 5.6) - This is THE solution for token limits:
 
-**Primary solution** (v2.3):
+**Primary solution** (v2.4):
 1. **Progressive Writing Strategy**:
    - Write findings to disk DURING analysis (not at end)
+   - Initialize file with Quick Reference Table
    - Flush every 50 findings → clear from context
    - Return summary only (2KB instead of 40KB+)
+   - Apply v2.4 output strategy: ALL CRITICAL/HIGH detailed + 5 MEDIUM + 5 LOW samples + Quick Reference Table for rest
    - Never exceeds 32K output token limit
+   - 100% findings documented (not sampled/omitted)
    - See Step 5.6 for complete implementation
 
 **Legacy alternatives** (only if Progressive Writing unavailable):
@@ -690,7 +704,7 @@ Focus: XSS, event loop blocking, async/await, prototype pollution
 3. Maintain count across batches
 4. Merge at end
 
-**Note**: The legacy approach is a workaround. Progressive Writing is the designed solution for large-scale analysis.
+**Note**: The legacy approach is a workaround. Progressive Writing v2.4 is the designed solution for large-scale analysis.
 
 ### Q: How detailed should code evidence be?
 **A**: Max 10 lines of actual code from the file. Include enough context to understand the issue.
@@ -713,24 +727,28 @@ Your output is COMPLETE when:
 ✅ Validation block present with all `true` values
 ✅ Complete JSON with all findings in response
 
-### For Progressive Writing (>100 findings or >100K LOC):
-✅ **Separate output files created** per agent category:
-   - `security_findings.md` exists with findings
-   - `performance_findings.md` exists with findings
-   - `concurrency_findings.md` exists with findings
-   - `architecture_findings.md` exists with findings
+### For Progressive Writing (>100 findings or >100K LOC) - v2.4:
+✅ **Separate output files created** per agent category with Quick Reference Tables:
+   - `security_findings.md` exists with Quick Reference Table + detailed findings
+   - `performance_findings.md` exists with Quick Reference Table + detailed findings
+   - `concurrency_findings.md` exists with Quick Reference Table + detailed findings
+   - `architecture_findings.md` exists with Quick Reference Table + detailed findings
 ✅ **Write-clear-continue pattern used** (flushed every 50 findings)
 ✅ **Returned summary only** (NOT full findings in response)
 ✅ **Summary includes**:
    - `findings_found`: total count discovered
-   - `findings_documented`: actual count written to file
+   - `findings_documented`: actual count written to file (100%)
    - `output_file`: filename where findings are stored
-   - `sampling_applied`: true/false
-✅ **Intelligent sampling applied** correctly:
-   - CRITICAL: ALL documented (no omissions)
-   - HIGH: ALL documented (no omissions)
-   - MEDIUM: Top 30% by impact documented
-   - LOW: Top 20% by frequency documented
+   - `output_strategy`: "v2.4"
+   - `breakdown`: detailed counts per severity (detailed vs in_table)
+✅ **v2.4 output strategy applied** correctly:
+   - CRITICAL: ALL documented in detailed format (5 lines each)
+   - HIGH: ALL documented in detailed format (5 lines each)
+   - MEDIUM: 5 samples in detailed format + rest in Quick Reference Table
+   - LOW: 5 samples in detailed format + rest in Quick Reference Table
+✅ **Quick Reference Table** present at top of each file:
+   - Contains ALL findings (100% indexed)
+   - Format: ID | Severity | Category | File:Line | Brief Description
 
 ---
 
@@ -758,6 +776,7 @@ Your output is COMPLETE when:
 
 ## 📝 VERSION HISTORY
 
+- **v2.4** (2025-10-12): Quick Reference Tables & Enhanced Output Strategy - ALL CRITICAL/HIGH detailed + 5 MEDIUM/LOW samples + Quick Reference Table for remaining findings (100% documentation, 0% omission)
 - **v2.3** (2025-10-12): Progressive Writing Strategy - incremental disk writes to bypass 32K output limit
 - **v2.2** (2025-10-12): Universal Context Management with adaptive compression strategies
 - **v2.1** (2025-10-11): Added completeness enforcement, START-HERE guide

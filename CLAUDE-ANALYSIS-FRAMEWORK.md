@@ -1,7 +1,7 @@
 # CLAUDE CODE ANALYSIS FRAMEWORK
 ## Universal Deep-Dive Code Review System
 
-**Version**: 2.3
+**Version**: 2.4
 **Last Updated**: 2025-10-12
 **Purpose**: Programmatic, scalable code analysis framework that works with any repository size and programming language
 
@@ -257,7 +257,7 @@ Each agent receives:
 - Orchestrator MUST validate `declared_count === actual_count` before accepting results
 - Any summarization detected = output REJECTED, agent must re-run
 
-#### Progressive Writing Strategy (v2.3)
+#### Progressive Writing Strategy (v2.4)
 
 **For Large Codebases (>100K LOC)**:
 
@@ -272,12 +272,12 @@ Architecture Agent → architecture_findings.md
 ```
 
 **Agent Pattern**:
-1. Initialize output file with header
+1. Initialize output file with **Quick Reference Table** header
 2. Analyze files in batches
 3. Write findings to file every 50 issues
 4. **Clear findings from context** after writing
 5. Continue analysis with freed context
-6. Apply sampling at end (CRIT=ALL, HIGH=ALL, MED=30%, LOW=20%)
+6. Apply **v2.4 output strategy**: ALL CRITICAL + ALL HIGH detailed, 5 MEDIUM + 5 LOW samples, rest in Quick Reference Table
 7. Return SUMMARY only (not full findings)
 
 **Agent Final Response** (Summary Only):
@@ -287,22 +287,24 @@ Architecture Agent → architecture_findings.md
   "status": "completed",
   "output_file": "security_findings.md",
   "findings_found": 250,
-  "findings_documented": 102,
-  "sampling_applied": true,
+  "findings_documented": 250,
+  "output_strategy": "v2.4",
   "breakdown": {
-    "CRITICAL": {"found": 8, "kept": 8},
-    "HIGH": {"found": 42, "kept": 42},
-    "MEDIUM": {"found": 120, "kept": 36},
-    "LOW": {"found": 80, "kept": 16}
+    "CRITICAL": {"found": 8, "detailed": 8, "in_table": 0},
+    "HIGH": {"found": 42, "detailed": 42, "in_table": 0},
+    "MEDIUM": {"found": 120, "detailed": 5, "in_table": 115},
+    "LOW": {"found": 80, "detailed": 5, "in_table": 75}
   },
   "context_usage": "48%"
 }
 ```
 
-**Benefits**:
+**v2.4 Benefits**:
 - No output token overflow (32K limit avoided)
 - Constant context usage (~50KB)
-- All findings preserved on disk
+- **ALL findings preserved** (100% documented)
+- **Quick Reference Tables** for instant navigation
+- ALL CRITICAL/HIGH issues detailed (not sampled)
 - Scalable to 1M+ LOC codebases
 
 **Example Agent Prompt**:
@@ -676,11 +678,11 @@ def validate_agent_output(output_json, agent_name):
 
 ---
 
-### Phase 6: Report Generation
+### Phase 6: Report Generation (v2.4)
 
-**Goal**: Transform JSON findings into professional markdown report
+**Goal**: Transform JSON findings into professional markdown report with complete coverage
 
-**Report Structure**:
+**v2.4 Report Structure**:
 
 ```markdown
 ================================================================================
@@ -691,6 +693,7 @@ Report ID: [YYYY-MM-DD-XXXX]
 Data Analisi: [YYYY-MM-DD]
 Tipo: Performance & Security Code Review
 Analisi: Completa 100%
+Framework Version: 2.4
 
 ## 1. EXECUTIVE SUMMARY
 
@@ -701,21 +704,23 @@ Analisi: Completa 100%
 - **Total Files**: [from manifest]
 - **Total LOC**: [from manifest]
 
-### Findings Overview
-- **CRITICAL**: [count] issues requiring immediate attention
-- **HIGH**: [count] issues requiring near-term resolution
-- **MEDIUM**: [count] issues for backlog
-- **LOW**: [count] minor improvements
-- **TOTAL**: [count] findings
+### Findings Overview (v2.4 Complete Coverage)
+- **CRITICAL**: [count] issues requiring immediate attention [ALL detailed below]
+- **HIGH**: [count] issues requiring near-term resolution [ALL detailed below]
+- **MEDIUM**: [count] issues for backlog [5 samples detailed, rest in Quick Reference]
+- **LOW**: [count] minor improvements [5 samples detailed, rest in Quick Reference]
+- **TOTAL**: [count] findings (100% documented)
 
 ## 2. PROJECT STRUCTURE
 [From manifest - architecture section]
 
-## 3. TOP 50 CRITICAL/HIGH ISSUES (Detailed)
+## 3. CRITICAL & HIGH PRIORITY ISSUES (ALL Detailed)
+
+**v2.4 Strategy**: ALL CRITICAL and HIGH findings documented in full detail (5 lines each)
 
 Context-optimized format: 5 lines per issue, focus on WHAT and WHY
 
-### [CRIT-001] Title
+### [DOMAIN]-001: Title
 **File**: `path/to/file:line`
 **Severity**: CRITICAL | HIGH
 **Problem**: [1-2 line factual description]
@@ -724,72 +729,95 @@ Context-optimized format: 5 lines per issue, focus on WHAT and WHY
 
 ---
 
-[Repeat for top 50 only]
+[Repeat for ALL CRITICAL findings]
+[Repeat for ALL HIGH findings]
 
-## 4. REMAINING ISSUES BY CATEGORY (Compact Tables)
+## 4. MEDIUM PRIORITY ISSUES (Representative Samples)
 
-### Security Issues (200+ remaining)
-| ID | File:Line | Pattern | Severity | Fix Hint |
-|----|-----------|---------|----------|----------|
-| SEC-051 | AuthController.java:45 | MISSING_INPUT_VALIDATION | HIGH | Add @Valid |
-| SEC-052 | UserService.java:123 | WEAK_CRYPTO_MD5 | MEDIUM | Use BCrypt |
-| [... all remaining security issues ...] |
+**v2.4 Strategy**: 5 detailed samples + Quick Reference Table for all remaining
 
-### Performance Issues (350+ remaining)
-| ID | File:Line | Pattern | Severity | Fix Hint |
-|----|-----------|---------|----------|----------|
-| PERF-101 | OrderService.java:234 | N+1_QUERY_LOOP | HIGH | Add @BatchSize(10) |
-| PERF-102 | ProductRepo.java:67 | MISSING_DB_INDEX | HIGH | CREATE INDEX |
-| [... all remaining performance issues ...] |
+[5 detailed MEDIUM findings in same format as above]
 
-### Concurrency Issues (100+ remaining)
-| ID | File:Line | Pattern | Severity | Fix Hint |
-|----|-----------|---------|----------|----------|
-| CONC-021 | CacheService.java:45 | HASHMAP_THREAD_UNSAFE | HIGH | Use ConcurrentHashMap |
-| [... all remaining concurrency issues ...] |
+---
 
-### Architecture Issues (150+ remaining)
-| ID | File:Line | Pattern | Severity | Fix Hint |
-|----|-----------|---------|----------|----------|
-| ARCH-051 | UserService.java | GOD_CLASS_1200_LOC | MEDIUM | Split into 3-4 services |
-| [... all remaining architecture issues ...] |
+### Quick Reference: All Remaining MEDIUM Issues
 
-## 8. STATISTICS
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [DOMAIN]-XXX | MEDIUM | [CATEGORY] | path/file.ext:123 | One-line description |
+| [... all remaining MEDIUM issues ...] |
+
+## 5. LOW PRIORITY ISSUES (Representative Samples)
+
+**v2.4 Strategy**: 5 detailed samples + Quick Reference Table for all remaining
+
+[5 detailed LOW findings in same format as above]
+
+---
+
+### Quick Reference: All Remaining LOW Issues
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [DOMAIN]-XXX | LOW | [CATEGORY] | path/file.ext:123 | One-line description |
+| [... all remaining LOW issues ...] |
+
+## 6. FINDINGS BY DOMAIN (Quick Navigation Index)
+
+### Security Findings Index
+See: `security_findings.md` for complete Quick Reference Table
+
+**Summary**:
+- CRITICAL: X (all detailed in Section 3)
+- HIGH: Y (all detailed in Section 3)
+- MEDIUM: Z (5 detailed in Section 4, rest in Quick Reference)
+- LOW: W (5 detailed in Section 5, rest in Quick Reference)
+
+### Performance Findings Index
+See: `performance_findings.md` for complete Quick Reference Table
+
+[Similar breakdown for each domain]
+
+## 7. STATISTICS
 
 ### By Severity
-- CRITICAL: X
-- HIGH: Y
-- MEDIUM: Z
-- LOW: W
+- CRITICAL: X (100% detailed)
+- HIGH: Y (100% detailed)
+- MEDIUM: Z (5 detailed + [Z-5] in Quick Reference)
+- LOW: W (5 detailed + [W-5] in Quick Reference)
 
 ### By Category
-- Security: X
-- Performance: Y
-- Concurrency: Z
-- Architecture: W
+- Security: X findings
+- Performance: Y findings
+- Concurrency: Z findings
+- Architecture: W findings
+- [see domain-specific files for Quick Reference Tables]
 
 ### By Layer
-- Controller: X
-- Service: Y
-- Repository: Z
-- Integration: W
+- Controller: X findings
+- Service: Y findings
+- Repository: Z findings
+- Integration: W findings
 
-## 9. RECOMMENDATIONS
+## 8. RECOMMENDATIONS
 
 ### Immediate Actions (This Sprint)
-1. [Ordered by severity and impact]
+1. [Ordered by severity and impact - focus on CRITICAL]
 
 ### Near-Term (Next 2 Sprints)
-1. [Ordered by value/effort ratio]
+1. [Ordered by value/effort ratio - focus on HIGH]
 
 ### Long-Term (Architectural)
-1. [Strategic improvements]
+1. [Strategic improvements - MEDIUM/LOW with high impact]
 
-## 10. APPENDIX
+## 9. APPENDIX
 
-### Analysis Methodology
+### Analysis Methodology (v2.4)
+- Framework Version: 2.4
 - Agents Used: [list]
 - Total Files Analyzed: [number]
+- Output Strategy: ALL CRITICAL + ALL HIGH detailed, 5 MEDIUM + 5 LOW samples
+- Quick Reference Tables: YES (all findings indexed)
 - Analysis Duration: [hours]
 - Token Budget Used: [number]
 
@@ -797,6 +825,12 @@ Context-optimized format: 5 lines per issue, focus on WHAT and WHY
 - [Link to OWASP guidelines if security issues]
 - [Link to performance benchmarks]
 - [Link to concurrency best practices]
+
+### Navigation Guide
+- For CRITICAL/HIGH findings: See Section 3 (all detailed)
+- For MEDIUM findings: See Section 4 (samples) + domain Quick Reference Tables
+- For LOW findings: See Section 5 (samples) + domain Quick Reference Tables
+- For complete domain analysis: See `{domain}_findings.md` files
 ```
 
 ---

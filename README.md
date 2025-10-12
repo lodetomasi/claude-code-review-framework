@@ -145,34 +145,47 @@ See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
 **Pros**: Simple, all findings in single response
 **Cons**: Fails with 32K overflow if too many findings
 
-### Strategy B: Progressive Writing (Large Codebases) - v2.3
+### Strategy B: Progressive Writing (Large Codebases) - v2.4
 
 **When to use**: Codebase > 100K LOC OR expected findings > 100 issues OR when unsure
 
 **How it works**:
-1. Each agent writes to **separate category file** during analysis:
-   - Security Agent → `security_findings.md`
-   - Performance Agent → `performance_findings.md`
-   - Concurrency Agent → `concurrency_findings.md`
-   - Architecture Agent → `architecture_findings.md`
+1. Each agent writes to **separate category file with Quick Reference Table** during analysis:
+   - Security Agent → `security_findings.md` (Quick Reference Table + Detailed Findings)
+   - Performance Agent → `performance_findings.md` (Quick Reference Table + Detailed Findings)
+   - Concurrency Agent → `concurrency_findings.md` (Quick Reference Table + Detailed Findings)
+   - Architecture Agent → `architecture_findings.md` (Quick Reference Table + Detailed Findings)
 
 2. **Write-Clear-Continue pattern**:
    - Analyze findings and write to file immediately
    - Every 50 findings: flush to disk → clear from context
    - Continue analysis with freed memory
 
-3. Agent returns **summary only** (2KB instead of 40KB+):
+3. **v2.4 Output Strategy** (100% documentation):
+   - ALL CRITICAL: Detailed format (5 lines each)
+   - ALL HIGH: Detailed format (5 lines each)
+   - 5 MEDIUM samples: Detailed format (representative examples)
+   - 5 LOW samples: Detailed format (representative examples)
+   - Remaining MEDIUM/LOW: Quick Reference Table
+
+4. Agent returns **summary only** (2KB instead of 40KB+):
    ```json
    {
      "agent": "Security Agent",
+     "output_strategy": "v2.4",
      "findings_found": 250,
-     "findings_documented": 102,
+     "findings_documented": 250,
      "output_file": "security_findings.md",
-     "sampling_applied": true
+     "breakdown": {
+       "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
+       "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
+       "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
+       "LOW": {"found": 25, "detailed": 5, "in_table": 20}
+     }
    }
    ```
 
-**Pros**: Never exceeds token limits, scales to 1M+ LOC
+**Pros**: Never exceeds token limits, scales to 1M+ LOC, 100% findings documented, Quick Reference Tables for navigation
 **Cons**: Findings split across multiple files
 
 **⚠️ CRITICAL**: If you have 200+ findings and try Standard Output → 32K TOKEN OVERFLOW ERROR
@@ -213,27 +226,35 @@ Run specialized agents in parallel:
 - **Resilience Agent**: Timeouts, circuit breakers, retries, bulkheads
 - **Architecture Agent**: Dependency violations, coupling, god classes
 
-#### For Large Codebases (>100K LOC) - Progressive Writing Strategy v2.3
+#### For Large Codebases (>100K LOC) - Progressive Writing Strategy v2.4
 
 Each agent executes with write-clear-continue pattern:
 
-1. **Initialize output file**: `security_findings.md` (category-specific)
+1. **Initialize output file with Quick Reference Table**: `security_findings.md` (category-specific)
 2. **Incremental writing loop**:
    - Analyze file and identify findings
    - Write findings to disk immediately (don't accumulate in memory)
    - Every 50 findings: flush to disk → **clear from context** → continue
-3. **Apply intelligent sampling**:
-   - CRITICAL: Document ALL (no omissions)
-   - HIGH: Document ALL (no omissions)
-   - MEDIUM: Sample top 30% by impact
-   - LOW: Sample top 20% by frequency
+3. **Apply v2.4 output strategy** (100% documentation):
+   - ALL CRITICAL: Detailed format (5 lines each) - no omissions
+   - ALL HIGH: Detailed format (5 lines each) - no omissions
+   - 5 MEDIUM samples: Detailed format (representative examples)
+   - 5 LOW samples: Detailed format (representative examples)
+   - Remaining MEDIUM/LOW: Quick Reference Table (ID | Severity | Category | File:Line | Brief Description)
 4. **Return summary only** (2KB instead of 40KB+ findings):
    ```json
    {
      "agent": "Security Agent",
+     "output_strategy": "v2.4",
      "findings_found": 250,
-     "findings_documented": 102,
-     "output_file": "security_findings.md"
+     "findings_documented": 250,
+     "output_file": "security_findings.md",
+     "breakdown": {
+       "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
+       "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
+       "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
+       "LOW": {"found": 25, "detailed": 5, "in_table": 20}
+     }
    }
    ```
 
@@ -679,9 +700,19 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
 
 ---
 
-**Version**: 2.3
+**Version**: 2.4
 **Last Updated**: 2025-10-12
 **Maintained By**: Code Review Framework Community
+
+### What's New in v2.4
+
+- 🆕 **Quick Reference Tables**: Every agent file starts with navigable table of ALL findings (100% indexed)
+- 🆕 **Complete CRITICAL/HIGH Coverage**: ALL critical and high findings in detailed format (not sampled)
+- 🆕 **Enhanced Output Strategy**: ALL CRITICAL + ALL HIGH detailed + 5 MEDIUM + 5 LOW samples + Quick Reference Table for rest
+- 🆕 **100% Documentation**: No findings omitted - every single issue preserved (0% omission rate)
+- 🆕 **Structured Navigation**: Quick Reference format (ID | Severity | Category | File:Line | Brief Description)
+- 🆕 **Agent Output Format**: Mandatory Quick Reference Table at top + Detailed Findings sections
+- 🆕 **Improved Summary**: Breakdown includes `detailed` vs `in_table` counts for transparency
 
 ### What's New in v2.3
 
