@@ -1,8 +1,8 @@
-# AGENT PROMPT TEMPLATES v2.2
+# AGENT PROMPT TEMPLATES v2.3
 
-**Enhanced with Chain of Thought Reasoning + Context-Optimized Output**
+**Enhanced with Chain of Thought Reasoning + Progressive Writing Strategy**
 
-Version: 2.2
+Version: 2.3
 Date: 2025-10-12
 Framework: claude-code-review-framework
 

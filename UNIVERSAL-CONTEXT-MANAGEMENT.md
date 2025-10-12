@@ -1,6 +1,6 @@
 # Universal Context Management Instructions - Full Spectrum Analysis
 
-**Version**: 2.2
+**Version**: 2.3
 **Date**: 2025-10-12
 **Framework**: claude-code-review-framework
 **Purpose**: Smart in-memory compression for context-efficient comprehensive analysis
