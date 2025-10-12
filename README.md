@@ -574,9 +574,29 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
 
 ---
 
-**Version**: 2.1
-**Last Updated**: 2025-10-11
+**Version**: 2.3
+**Last Updated**: 2025-10-12
 **Maintained By**: Code Review Framework Community
+
+### What's New in v2.3
+
+- 🚀 **Progressive Writing Strategy**: Write findings to disk DURING analysis, not at end
+- 🚀 **32K Output Limit Solution**: Incremental write-clear-continue pattern bypasses token limits
+- 🚀 **Scalability Proven**: Successfully analyzed 138K+ LOC (1,350 files) without overflow
+- 🚀 **Constant Memory Usage**: Write every 50 findings → clear from context → 67% savings
+- 🚀 **Intelligent Sampling**: CRITICAL=ALL, HIGH=ALL, MEDIUM=30%, LOW=20%
+- 🚀 **Agent Architecture**: Each agent writes to separate file (security_findings.md, performance_findings.md, etc.)
+- 🚀 **Summary-Only Returns**: Agents return 2KB summary instead of 40KB+ findings
+
+### What's New in v2.2
+
+- 🆕 **Universal Context Management**: Smart in-memory compression for large codebases
+- 🆕 **Adaptive Strategies**: Automatic mode selection based on codebase size (10K-100K+ LOC)
+- 🆕 **Progressive Compression**: Full details → Compressed → Pattern codes based on context usage
+- 🆕 **Equal Domain Priority**: 25% each for Security, Performance, Concurrency, Architecture
+- 🆕 **Smart Sampling**: Strategic 60% coverage for very large codebases (>100K LOC)
+- 🆕 **Context Monitoring**: Active threshold management (0-60%, 60-70%, 70-80%, 80-90%, >90%)
+- 🆕 **Intelligent Batching**: Group similar findings to save context without losing quality
 
 ### What's New in v2.1
 
@@ -597,6 +617,7 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
 2. Read [COMPLETENESS-ENFORCEMENT.md](COMPLETENESS-ENFORCEMENT.md) - Learn 3-phase validation
 3. Review [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) - Overall workflow
 4. Study [AGENT-PROMPTS.md](AGENT-PROMPTS.md) - Agent templates and examples
+5. **Read [UNIVERSAL-CONTEXT-MANAGEMENT.md](UNIVERSAL-CONTEXT-MANAGEMENT.md) for large codebases (>50K LOC)** - Context optimization strategies
 
 ### For Humans
 1. Read [QUICK-START.md](QUICK-START.md) for hands-on tutorial

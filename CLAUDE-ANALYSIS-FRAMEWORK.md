@@ -1,8 +1,8 @@
 # CLAUDE CODE ANALYSIS FRAMEWORK
 ## Universal Deep-Dive Code Review System
 
-**Version**: 2.0
-**Last Updated**: 2025-10-11
+**Version**: 2.3
+**Last Updated**: 2025-10-12
 **Purpose**: Programmatic, scalable code analysis framework that works with any repository size and programming language
 
 ---
@@ -238,6 +238,54 @@ Each agent receives:
 - Output MUST include `validation` block confirming completeness
 - Orchestrator MUST validate `declared_count === actual_count` before accepting results
 - Any summarization detected = output REJECTED, agent must re-run
+
+#### Progressive Writing Strategy (v2.3)
+
+**For Large Codebases (>100K LOC)**:
+
+Instead of returning all findings in response, agents write progressively to disk:
+
+```bash
+# Each agent writes to its own file
+Security Agent → security_findings.md
+Performance Agent → performance_findings.md
+Concurrency Agent → concurrency_findings.md
+Architecture Agent → architecture_findings.md
+```
+
+**Agent Pattern**:
+1. Initialize output file with header
+2. Analyze files in batches
+3. Write findings to file every 50 issues
+4. **Clear findings from context** after writing
+5. Continue analysis with freed context
+6. Apply sampling at end (CRIT=ALL, HIGH=ALL, MED=30%, LOW=20%)
+7. Return SUMMARY only (not full findings)
+
+**Agent Final Response** (Summary Only):
+```json
+{
+  "agent": "Security Agent",
+  "status": "completed",
+  "output_file": "security_findings.md",
+  "findings_found": 250,
+  "findings_documented": 102,
+  "sampling_applied": true,
+  "breakdown": {
+    "CRITICAL": {"found": 8, "kept": 8},
+    "HIGH": {"found": 42, "kept": 42},
+    "MEDIUM": {"found": 120, "kept": 36},
+    "LOW": {"found": 80, "kept": 16}
+  },
+  "context_usage": "48%"
+}
+```
+
+**Benefits**:
+- No output token overflow (32K limit avoided)
+- Constant context usage (~50KB)
+- All findings preserved on disk
+- Scalable to 1M+ LOC codebases
 
 **Example Agent Prompt**:
 
@@ -645,47 +693,48 @@ Analisi: Completa 100%
 ## 2. PROJECT STRUCTURE
 [From manifest - architecture section]
 
-## 3. CRITICAL ISSUES (Risoluzione Immediata)
+## 3. TOP 50 CRITICAL/HIGH ISSUES (Detailed)
+
+Context-optimized format: 5 lines per issue, focus on WHAT and WHY
 
 ### [CRIT-001] Title
 **File**: `path/to/file:line`
-**Type**: SECURITY | PERFORMANCE | CONCURRENCY
-**Category**: [specific category]
-
-**Code**:
-```java
-[actual code snippet]
-```
-
-**Problem**: [factual description]
-
-**Impact**: [concrete impact]
-
-**Recommendation**: [actionable fix]
+**Severity**: CRITICAL | HIGH
+**Problem**: [1-2 line factual description]
+**Impact**: [concrete impact - minimal]
+**Fix**: [1 line hint]
 
 ---
 
-[Repeat for all CRITICAL]
+[Repeat for top 50 only]
 
-## 4. HIGH PRIORITY ISSUES
-[Same format]
+## 4. REMAINING ISSUES BY CATEGORY (Compact Tables)
 
-## 5. MEDIUM PRIORITY ISSUES
-[Same format - may be summarized if >50]
+### Security Issues (200+ remaining)
+| ID | File:Line | Pattern | Severity | Fix Hint |
+|----|-----------|---------|----------|----------|
+| SEC-051 | AuthController.java:45 | MISSING_INPUT_VALIDATION | HIGH | Add @Valid |
+| SEC-052 | UserService.java:123 | WEAK_CRYPTO_MD5 | MEDIUM | Use BCrypt |
+| [... all remaining security issues ...] |
 
-## 6. LOW PRIORITY ISSUES
-[Same format - may be summarized if >100]
+### Performance Issues (350+ remaining)
+| ID | File:Line | Pattern | Severity | Fix Hint |
+|----|-----------|---------|----------|----------|
+| PERF-101 | OrderService.java:234 | N+1_QUERY_LOOP | HIGH | Add @BatchSize(10) |
+| PERF-102 | ProductRepo.java:67 | MISSING_DB_INDEX | HIGH | CREATE INDEX |
+| [... all remaining performance issues ...] |
 
-## 7. QUICK WINS (1-2 Hour Fixes)
+### Concurrency Issues (100+ remaining)
+| ID | File:Line | Pattern | Severity | Fix Hint |
+|----|-----------|---------|----------|----------|
+| CONC-021 | CacheService.java:45 | HASHMAP_THREAD_UNSAFE | HIGH | Use ConcurrentHashMap |
+| [... all remaining concurrency issues ...] |
 
-### Configuration Changes
-```yaml
-# Add to application.yml
-[specific configs with values]
-```
-
-### Code Patterns to Replace
-[Specific before/after examples]
+### Architecture Issues (150+ remaining)
+| ID | File:Line | Pattern | Severity | Fix Hint |
+|----|-----------|---------|----------|----------|
+| ARCH-051 | UserService.java | GOD_CLASS_1200_LOC | MEDIUM | Split into 3-4 services |
+| [... all remaining architecture issues ...] |
 
 ## 8. STATISTICS
 

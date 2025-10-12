@@ -1,8 +1,8 @@
 # START HERE - AI Model Reading Guide
 ## Claude Code Review Framework
 
-**Version**: 2.1
-**Last Updated**: 2025-10-11
+**Version**: 2.2
+**Last Updated**: 2025-10-12
 **Audience**: AI Models (Claude, GPT, etc.) tasked with code review
 
 ---
@@ -107,6 +107,56 @@ This guide tells you **HOW TO READ** the framework documentation in the correct 
 - 30-minute full analysis workflow
 - Examples for Spring Boot, Django, Node.js
 - Troubleshooting common issues
+
+---
+
+### Step 5.5 (CRITICAL - NEW v2.2): Universal Context Management
+**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md`
+**Time**: 8 minutes
+**Purpose**: Master smart compression for large codebases
+**READ BEFORE analyzing codebases >50K LOC**
+
+**Why Critical**: Context window is limited (200K tokens). Large projects need intelligent compression.
+
+**Key Principles**:
+1. **Monitor context actively** (check every 10 files)
+2. **Equal domain priority** (25% Security, 25% Performance, 25% Concurrency, 25% Architecture)
+3. **Progressive compression** (full details → compressed → pattern codes)
+4. **Smart sampling** (for >100K LOC codebases)
+
+**Context Thresholds**:
+```
+0-60%: Full analysis
+60-70%: Start batching similar findings
+70-80%: CRITICAL + HIGH only
+80-90%: CRITICAL only with pattern codes
+>90%: Emergency output
+```
+
+**Adaptive Strategies**:
+- **<10K LOC**: Single pass, full details
+- **10-50K LOC**: Layer-based chunks
+- **50-100K LOC**: Pattern-based chunks with compression
+- **>100K LOC**: Strategic sampling (60% coverage)
+
+**Memory Management**:
+```
+ANALYZE → EXTRACT → COMPRESS → CLEAR
+
+Keep: CRITICAL findings with full context
+Clear: File contents, duplicate patterns, boilerplate
+```
+
+**Output Reconstruction**:
+- During analysis: Store compressed (save context)
+- Final output: Expand to full detail (user sees complete findings)
+
+**Read Full Document**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` for:
+- Complete threshold guidelines
+- Compression format examples
+- Batching algorithms
+- Sampling strategies
+- Pattern libraries
 
 ---
 
@@ -227,11 +277,19 @@ If ANY validation is `false`, output is REJECTED.
 | `CLAUDE-ANALYSIS-FRAMEWORK.md` | Overall workflow | THIRD |
 | `AGENT-PROMPTS.md` | Agent templates | FOURTH |
 | `QUICK-START.md` | Examples | OPTIONAL |
+| `UNIVERSAL-CONTEXT-MANAGEMENT.md` | Context optimization | CRITICAL for >50K LOC |
 
 ### When Executing Code Review
+
+**For ALL projects**:
 1. Load `COMPLETENESS-ENFORCEMENT.md` → internalize rules
 2. Load `AGENT-PROMPTS.md` → copy relevant agent template
 3. Reference `CLAUDE-ANALYSIS-FRAMEWORK.md` → for workflow phases
+
+**For large codebases (>50K LOC)**:
+4. Load `UNIVERSAL-CONTEXT-MANAGEMENT.md` → apply compression strategy
+5. Monitor context usage every 10 files
+6. Apply adaptive chunking based on size
 
 ---
 
@@ -416,6 +474,8 @@ Your output is COMPLETE when:
 
 ## 📝 VERSION HISTORY
 
+- **v2.3** (2025-10-12): Progressive Writing Strategy - incremental disk writes to bypass 32K output limit
+- **v2.2** (2025-10-12): Universal Context Management with adaptive compression strategies
 - **v2.1** (2025-10-11): Added completeness enforcement, START-HERE guide
 - **v2.0** (2025-10-10): Multi-agent framework with language plugins
 - **v1.0** (2025-10-09): Initial framework
