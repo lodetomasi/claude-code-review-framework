@@ -1,9 +1,13 @@
 # Universal Context Management Instructions - Full Spectrum Analysis
 
-**Version**: 2.3
+**Version**: 3.0
 **Date**: 2025-10-12
 **Framework**: claude-code-review-framework
 **Purpose**: Smart in-memory compression for context-efficient comprehensive analysis
+**Breaking Changes from v2.3**:
+- Fixed Progressive Compression vs Completeness contradiction (added RULE HIERARCHY)
+- v2.4 Output Strategy → v3.0 Unified Strategy (count-based sampling)
+- Sampling threshold: >500K LOC (was >100K LOC)
 
 ---
 
@@ -19,6 +23,8 @@
 1. **Universal Context Management** (Step 5.5): Smart compression for 50-100K LOC
 2. **Progressive Writing Strategy** (Step 5.6): Incremental disk writes for >100K LOC
 
+**NEW in v3.0**: Also read [FRAMEWORK-RULES-HIERARCHY.md](FRAMEWORK-RULES-HIERARCHY.md) to understand rule priority when there are conflicts
+
 🎯 **[→ GO TO START-HERE.md](START-HERE.md)** if you need to understand when to apply these strategies.
 
 ---
@@ -27,6 +33,43 @@
 1. **Analyze ALL aspects with EQUAL priority**: Security, Performance, Concurrency, Architecture
 2. **Manage context window ACTIVELY**: Monitor usage, compress intelligently, never overflow
 3. **Maintain FULL quality**: Complete output regardless of codebase size
+
+---
+
+## ⚖️ RULE HIERARCHY (v3.0 - CRITICAL)
+
+**When rules conflict, follow this priority order**:
+
+### PRIORITY 1: COMPLETENESS (Non-Negotiable)
+```
+FROM COMPLETENESS-ENFORCEMENT.md:
+- You MUST find and document ALL findings
+- Pre-analysis ESTIMATION (not exact count) is mandatory
+- Validation checks actual_count is within [min, max] range
+```
+
+### PRIORITY 2: CONTEXT MANAGEMENT (Enabler)
+```
+FROM THIS DOCUMENT:
+- Progressive Compression is HOW you achieve completeness within context limits
+- Compress during analysis, expand for final output
+- NEVER compress CRITICAL/HIGH findings
+- Write to disk progressively to free context
+```
+
+### PRIORITY 3: OUTPUT STRATEGY (Presentation)
+```
+FROM THIS DOCUMENT (v3.0 Unified Strategy):
+- Count-based sampling rules for final output
+- MEDIUM: <20 = ALL, 20-50 = top 10 + Quick Ref, >50 = top 5 + Quick Ref
+- LOW: <15 = ALL, 15-40 = top 8 + Quick Ref, >40 = top 3 + Quick Ref
+- CRITICAL/HIGH: ALWAYS ALL (never sampled)
+```
+
+**Conflict Resolution Example**:
+- COMPLETENESS says "document ALL findings"
+- CONTEXT MANAGEMENT says "compress during analysis"
+- **Resolution**: Document all during analysis (compressed in memory), write all to disk progressively, apply sampling only for final presentation if >20 MEDIUM or >15 LOW
 
 ---
 
@@ -87,16 +130,26 @@ Never keep in memory:
 - Boilerplate code
 ```
 
-### PROGRESSIVE COMPRESSION
+### PROGRESSIVE COMPRESSION (During Analysis Only)
 ```
 First occurrence of pattern: Store full details
 Second occurrence: Store location only
 Third+ occurrence: Increment counter only
 
-Example:
+Example (IN-MEMORY during analysis):
 - N+1 Query #1: Full analysis with evidence
-- N+1 Query #2-50: Just locations list
-- Output: "N+1 pattern found in 50 locations"
+- N+1 Query #2-50: Just locations list (compressed)
+
+Example (DISK WRITE via Progressive Writing):
+- Write ALL 50 occurrences to disk with full details
+- Clear from memory after writing
+
+Example (FINAL OUTPUT per v3.0 Unified Strategy):
+- If CRITICAL/HIGH: Keep ALL 50 in report
+- If MEDIUM and >20 total: Top 10 detailed + Quick Reference Table for remaining 40
+- If LOW and >15 total: Top 3 detailed + Quick Reference Table for remaining 47
+
+**CRITICAL RULE**: NEVER compress CRITICAL or HIGH findings - always full details
 ```
 
 ---
@@ -130,15 +183,27 @@ Chunk 4: Architecture analysis on core only
 Aggressive compression between chunks
 ```
 
-**VERY LARGE (>100K LOC)**: Sampling mode
+**VERY LARGE (100K-500K LOC)**: Progressive Writing with Full Analysis
 ```
-Sample 20% strategically:
-- 100% of entry points
-- 50% of business logic
-- 20% of utilities
-- 100% of security-critical paths
+Analyze 100% with Progressive Writing Strategy:
+- Write findings to disk every 50 findings (dynamic based on context)
+- Clear from memory after writing
+- Full coverage maintained via disk storage
+- No sampling during analysis
 
-Report sampling confidence
+See "Progressive Writing Strategy v3.0" section below
+```
+
+**EXTREMELY LARGE (>500K LOC)**: Strategic Sampling Mode
+```
+Sample minimum 40% strategically:
+- 100% of entry points (Controllers, APIs)
+- 80% of business logic (Services)
+- 40% of data layer (Repositories)
+- 100% of security-critical paths
+- 40% of utilities
+
+Report sampling confidence and coverage statistics
 ```
 
 ---
@@ -383,14 +448,17 @@ OUTPUT (expanded):
 
 ---
 
-## 📊 EXPECTED OUTCOMES
+## 📊 EXPECTED OUTCOMES (v3.0)
 
-| Codebase Size | Context Strategy | Coverage | Output Quality |
-|---------------|-----------------|----------|----------------|
-| <10K LOC | Full analysis | 100% | Complete |
-| 10-50K LOC | Smart chunks | 95% | Complete |
-| 50-100K LOC | Compressed | 85% | Complete for Critical/High |
-| >100K LOC | Sampling | 60% | Complete for sampled portions |
+| Codebase Size | Context Strategy | Analysis Coverage | Output Strategy |
+|---------------|-----------------|-------------------|-----------------|
+| <10K LOC | Full analysis | 100% | All findings detailed |
+| 10-50K LOC | Smart chunks | 100% | All findings detailed |
+| 50-100K LOC | Progressive Writing | 100% | v3.0 Unified (count-based) |
+| 100-500K LOC | Progressive Writing | 100% | v3.0 Unified (count-based) |
+| >500K LOC | Strategic Sampling | 40%+ | v3.0 Unified (count-based) |
+
+**Key Change from v2.3**: 100K-500K LOC now get 100% analysis coverage (not 60%)
 
 ---
 
@@ -422,7 +490,7 @@ Reference: "Found N1-PATTERN at line 234"
 
 ---
 
-## 🚀 PROGRESSIVE WRITING STRATEGY (v2.3)
+## 🚀 PROGRESSIVE WRITING STRATEGY (v3.0)
 
 ### Problem
 
@@ -445,7 +513,7 @@ Agent 3 → concurrency_findings.md
 Agent 4 → architecture_findings.md
 ```
 
-#### Phase 2: Incremental Writing Pattern
+#### Phase 2: Incremental Writing Pattern (v3.0 - Dynamic Intervals)
 
 Each agent follows this pattern:
 
@@ -465,33 +533,53 @@ for file in all_files:
     findings_batch.extend(issues)
     count += len(issues)
 
-    # Every 50 findings, FLUSH TO DISK
-    if count % 50 == 0:
+    # v3.0: Dynamic write interval based on context usage
+    context_usage = get_context_usage_percentage()
+
+    if context_usage < 70:
+        write_interval = 50
+    elif context_usage < 85:
+        write_interval = 25
+    elif context_usage < 95:
+        write_interval = 10
+    else:
+        write_interval = 1  # Write immediately
+
+    # FLUSH TO DISK when threshold reached
+    if count % write_interval == 0:
         for finding in findings_batch:
             write_to_file(finding)
 
         # CLEAR from context (critical!)
         findings_batch = []
 
-        print(f"[Progress] {count} findings written")
+        print(f"[Progress] {count} findings written (interval: {write_interval})")
 
 # Write remaining
 for finding in findings_batch:
     write_to_file(finding)
 ```
 
-#### Phase 3: Sampling Application
+#### Phase 3: v3.0 Unified Output Strategy
 
-After writing ALL findings, apply sampling:
+After writing ALL findings, apply count-based sampling:
 
 ```python
-def apply_sampling(findings_file):
+def apply_v3_unified_sampling(findings_file):
     """
-    Keep:
-    - ALL CRITICAL
-    - ALL HIGH
-    - Top 30% MEDIUM (by impact)
-    - Top 20% LOW (by frequency)
+    v3.0 Unified Output Strategy (Count-Based):
+
+    CRITICAL/HIGH: ALWAYS ALL (never sampled)
+
+    MEDIUM:
+    - If <20: Keep ALL
+    - If 20-50: Top 10 detailed + Quick Reference Table
+    - If >50: Top 5 detailed + Quick Reference Table
+
+    LOW:
+    - If <15: Keep ALL
+    - If 15-40: Top 8 detailed + Quick Reference Table
+    - If >40: Top 3 detailed + Quick Reference Table
     """
 
     findings = read_all_findings(findings_file)
@@ -501,22 +589,58 @@ def apply_sampling(findings_file):
     medium = filter(severity == 'MEDIUM')
     low = filter(severity == 'LOW')
 
-    # Keep all CRIT + HIGH
-    kept = critical + high
+    # ALWAYS keep all CRITICAL + HIGH
+    output = []
+    output += critical  # ALL
+    output += high      # ALL
 
-    # Sample MEDIUM: top 30%
+    # MEDIUM: count-based rules
     medium_sorted = sort_by_impact(medium)
-    kept += medium_sorted[:int(len(medium) * 0.30)]
+    if len(medium) < 20:
+        output += medium_sorted  # ALL
+    elif len(medium) <= 50:
+        output += medium_sorted[:10]  # Top 10
+        output.append(create_quick_ref_table(medium_sorted[10:]))
+    else:  # >50
+        output += medium_sorted[:5]   # Top 5
+        output.append(create_quick_ref_table(medium_sorted[5:]))
 
-    # Sample LOW: top 20%
-    low_grouped = group_by_pattern(low)
-    for pattern, instances in low_grouped:
-        kept += instances[:int(len(instances) * 0.20)]
+    # LOW: count-based rules
+    low_sorted = sort_by_frequency(low)
+    if len(low) < 15:
+        output += low_sorted  # ALL
+    elif len(low) <= 40:
+        output += low_sorted[:8]   # Top 8
+        output.append(create_quick_ref_table(low_sorted[8:]))
+    else:  # >40
+        output += low_sorted[:3]   # Top 3
+        output.append(create_quick_ref_table(low_sorted[3:]))
 
-    # Overwrite file with sampled findings
-    write_findings_file(findings_file, kept)
+    # Overwrite file with final output
+    write_findings_file(findings_file, output)
 
-    return len(kept)
+    return {
+        'critical': len(critical),
+        'high': len(high),
+        'medium_total': len(medium),
+        'medium_detailed': min(len(medium), 10 if len(medium) <= 50 else 5),
+        'low_total': len(low),
+        'low_detailed': min(len(low), 8 if len(low) <= 40 else 3)
+    }
+
+
+def create_quick_ref_table(findings):
+    """Create Quick Reference Table for non-detailed findings"""
+    return {
+        'type': 'QUICK_REFERENCE_TABLE',
+        'count': len(findings),
+        'format': 'markdown_table',
+        'columns': ['ID', 'File', 'Line', 'Pattern', 'Impact'],
+        'rows': [
+            [f.id, f.file, f.line, f.pattern, f.impact]
+            for f in findings
+        ]
+    }
 ```
 
 #### Phase 4: Merge
@@ -529,17 +653,20 @@ cat security_findings.md \
     > CODE_REVIEW_REPORT_v2.2.md
 ```
 
-### Benefits
+### Benefits (v3.0)
 
-| Metric | Without Progressive Write | With Progressive Write |
-|--------|---------------------------|------------------------|
+| Metric | Without Progressive Write | With Progressive Write v3.0 |
+|--------|---------------------------|---------------------------|
 | Peak Context | 150KB (crash) | 50KB (safe) |
-| Output Size | >32K tokens (fails) | 25K tokens (success) |
+| Output Size | >32K tokens (fails) | 28K tokens (success) |
 | Issues Found | 0 (crashed) | 800+ (found all) |
-| Issues Documented | 0 | 220 (sampled) |
+| Issues Documented | 0 | 464 (v3.0 count-based) |
+| CRITICAL/HIGH | 0 | ALL (100%) |
+| MEDIUM | 0 | ALL if <20, else top samples |
+| LOW | 0 | ALL if <15, else top samples |
 | Context Savings | N/A | **67%** |
 
-### Example: Security Analysis
+### Example: Security Analysis (v3.0)
 
 ```
 Files analyzed: 1,350 Java files
@@ -553,26 +680,35 @@ Batch 13 (files 1201-1350): 18 issues → Write to disk → Clear
 
 Total written: 250 issues to security_findings.md
 
-Apply sampling:
-- CRITICAL: 8 → Keep ALL (8)
-- HIGH: 42 → Keep ALL (42)
-- MEDIUM: 120 → Keep 30% (36)
-- LOW: 80 → Keep 20% (16)
+Apply v3.0 Unified Sampling:
+- CRITICAL: 8 → Keep ALL (8) ✓
+- HIGH: 42 → Keep ALL (42) ✓
+- MEDIUM: 120 (>50) → Keep top 5 detailed + Quick Ref Table (115)
+- LOW: 80 (>40) → Keep top 3 detailed + Quick Ref Table (77)
 
-Final: 102 issues in security_findings.md
+Final output:
+- Detailed findings: 8 + 42 + 5 + 3 = 58
+- Quick Reference entries: 115 + 77 = 192
+- Total documented: 250 (100% coverage)
+- Report size: ~18KB (optimized)
 ```
 
-### Agent Instructions
+### Agent Instructions (v3.0)
 
 When implementing this, agents must:
 
-1. **Initialize output file** at start
-2. **Accumulate findings** in batches of 50
-3. **Write batch to file** every 50 findings
-4. **Clear batch from context** after writing
-5. **Continue analysis** with freed context
-6. **Apply sampling** at the end
-7. **Report statistics** (found vs documented)
+1. **Initialize output file** at start with header
+2. **Monitor context usage** continuously
+3. **Accumulate findings** in dynamic batches:
+   - Context <70%: batch of 50
+   - Context 70-85%: batch of 25
+   - Context 85-95%: batch of 10
+   - Context >95%: write immediately (batch of 1)
+4. **Write batch to file** when threshold reached
+5. **Clear batch from context** after writing
+6. **Continue analysis** with freed context
+7. **Apply v3.0 Unified Sampling** at the end (count-based rules)
+8. **Report statistics** (found, detailed, quick-ref counts)
 
 ### Output Format
 
@@ -589,16 +725,20 @@ Each finding written to file:
 
 ---
 
-## 🎯 SUCCESS CRITERIA
+## 🎯 SUCCESS CRITERIA (v3.0)
 
 Your analysis succeeds when:
 1. **No context overflow** (stayed under 95%)
 2. **All domains analyzed** (security, performance, concurrency, architecture)
-3. **Output is complete** (all findings properly detailed)
+3. **Output is complete** (all findings found and written to disk)
 4. **Coverage is clear** (user knows what was/wasn't analyzed)
 5. **Fixes are actionable** (developer can implement immediately)
 6. **Progressive writing used** (for >100K LOC codebases)
-7. **Sampling applied** (CRIT=ALL, HIGH=ALL, MED=30%, LOW=20%)
+7. **v3.0 Unified Sampling applied** (count-based rules):
+   - CRITICAL/HIGH: ALL (100%)
+   - MEDIUM: ALL if <20, else top samples + Quick Ref
+   - LOW: ALL if <15, else top samples + Quick Ref
+8. **100% documented** (via combination of detailed + Quick Reference Tables)
 
 ---
 

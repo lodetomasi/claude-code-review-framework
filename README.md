@@ -1,25 +1,32 @@
-# Universal Code Review Framework
+# Universal Code Review Framework v3.0
 
 **A scalable, language-agnostic framework for deep code analysis using AI agents**
+
+**Version**: 3.0
+**Last Updated**: 2025-10-12
+**Breaking Changes from v2.4**: Pre-Analysis Counting → Estimation, Fixed "5 samples" → Count-based sampling, Sampling threshold >500K LOC (was >100K)
 
 ---
 
 ## Overview
 
-This framework enables **comprehensive, line-by-line code analysis** of repositories of any size (10K to 100K+ LOC) in any programming language (Java, Python, JavaScript, Go, etc.) using specialized AI agents and intelligent orchestration.
+This framework enables **comprehensive, line-by-line code analysis** of repositories of any size (10K to 500K+ LOC) in any programming language (Java, Python, JavaScript, Go, etc.) using specialized AI agents and intelligent orchestration.
 
-### Key Features
+### Key Features (v3.0)
 
 - **Language Agnostic**: Works with Java, Python, JavaScript, and easily extensible to other languages
-- **Scalable**: Handles codebases from 10K to 100K+ lines of code
+- **Scalable**: Handles codebases from 10K to 500K+ lines of code (strategic sampling for >500K)
 - **Intelligent**: Uses pattern-based scanning to identify hotspots before deep analysis
 - **Parallel**: Runs multiple specialized agents concurrently
 - **Comprehensive**: Analyzes security, performance, concurrency, resilience, and architecture
 - **Factual**: Reports only verified issues with code evidence
 - **Actionable**: Provides concrete recommendations with code examples
-- **100% Complete**: Guarantees every finding is documented individually (no summarization)
+- **100% Complete**: Guarantees every finding is documented (detailed or in Quick Reference Table)
 - **Chain of Thought**: Systematic 6-step analysis with confidence scoring for each finding
-- **Validated**: 3-phase enforcement mechanism ensures declared_count === actual_count
+- **Validated (v3.0)**: 3-phase enforcement with estimation ranges (not impossible exact counts)
+- **Count-Based Sampling (v3.0)**: MEDIUM <20=ALL, LOW <15=ALL (adaptive to finding count)
+- **Dynamic Context Management (v3.0)**: Write intervals adapt to context usage (50/25/10/1)
+- **Rule Hierarchy (v3.0)**: Clear priority when framework rules conflict (Completeness > Context Mgmt > Output)
 
 ### What Problems Does It Solve?
 
@@ -29,7 +36,8 @@ This framework enables **comprehensive, line-by-line code analysis** of reposito
 4. **Efficiency**: Pattern scanning identifies hotspots for targeted deep analysis
 5. **Completeness**: Ensures 100% code coverage through systematic orchestration
 6. **AI Summarization**: Prevents AI from grouping findings ("8 SQL injections found" → lists all 8 with file:line)
-7. **Finding Loss**: 3-phase validation guarantees no findings are omitted during analysis
+7. **Finding Loss (v3.0)**: 3-phase validation with estimation ranges (not impossible exact match)
+8. **Framework Contradictions (v3.0)**: Rule hierarchy resolves conflicting directives
 
 ---
 
@@ -130,24 +138,25 @@ See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
 |---------------|-------------------|----------|--------|
 | < 50K LOC | < 100 issues | **Standard Output** | Fits comfortably in 32K token output limit |
 | 50-100K LOC | 100-200 issues | **Progressive Writing** | May exceed token limit - safer to use incremental writing |
-| > 100K LOC | 200+ issues | **Progressive Writing** ⚠️ **MANDATORY** | Will definitely exceed token limit - must use incremental writing |
+| 100-500K LOC | 200+ issues | **Progressive Writing** ⚠️ **MANDATORY** | Will definitely exceed token limit - must use incremental writing |
+| > 500K LOC | 200+ issues | **Progressive Writing + Strategic Sampling** ⚠️ **MANDATORY** | Massive codebase requires 40% minimum sampling |
 
 ### Strategy A: Standard Output (Small/Medium Codebases)
 
 **When to use**: Codebase < 100K LOC AND expected findings < 100 issues
 
-**How it works**:
+**How it works (v3.0)**:
 - Agents analyze code and accumulate findings in memory
 - Return complete JSON with all findings
-- Validate: `declared_count === actual_count`
+- Validate: `actual_count` within `[min_estimate, max_estimate]`
 - Maximum output: ~30KB (safe within 32K limit)
 
 **Pros**: Simple, all findings in single response
 **Cons**: Fails with 32K overflow if too many findings
 
-### Strategy B: Progressive Writing (Large Codebases) - v2.4
+### Strategy B: Progressive Writing (Large Codebases) - v3.0
 
-**When to use**: Codebase > 100K LOC OR expected findings > 100 issues OR when unsure
+**When to use**: Codebase 100-500K LOC OR expected findings > 100 issues OR when unsure
 
 **How it works**:
 1. Each agent writes to **separate category file with Quick Reference Table** during analysis:

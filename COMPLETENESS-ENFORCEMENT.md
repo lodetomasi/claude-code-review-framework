@@ -1,9 +1,10 @@
 # COMPLETENESS ENFORCEMENT MECHANISMS
 ## Framework Extension for Guaranteed 100% Finding Documentation
 
-**Version**: 2.3
+**Version**: 3.0
 **Purpose**: Eliminate AI tendency to summarize - force documentation of EVERY finding
 **Integration**: Use with AGENT-PROMPTS.md and CLAUDE-ANALYSIS-FRAMEWORK.md
+**Breaking Changes from v2.3**: Pre-Analysis Count → Estimation with confidence intervals
 
 ---
 
@@ -12,6 +13,8 @@
 **This document is Step 2** in the mandatory reading order defined in [START-HERE.md](START-HERE.md).
 
 **If you arrived here directly**: Please read [START-HERE.md](START-HERE.md) first for proper context and reading sequence.
+
+**NEW in v3.0**: Also read [FRAMEWORK-RULES-HIERARCHY.md](FRAMEWORK-RULES-HIERARCHY.md) to understand conflict resolution when rules seem contradictory.
 
 **Why this matters**:
 - START-HERE.md provides the "BEFORE YOU START" assessment (codebase size, expected findings)
@@ -52,9 +55,9 @@ SEC-008: SQL injection in ParametriRepository.java:67
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  LAYER 1: PRE-ANALYSIS COUNTING                     │
-│  - Force agent to COUNT before analyzing            │
-│  - Declare expected finding count                   │
+│  LAYER 1: PRE-ANALYSIS ESTIMATION                   │
+│  - Run preliminary grep/pattern scan                │
+│  - ESTIMATE finding count with confidence interval  │
 │  - Create accountability baseline                   │
 └─────────────────────────────────────────────────────┘
                         ↓
@@ -68,7 +71,7 @@ SEC-008: SQL injection in ParametriRepository.java:67
 ┌─────────────────────────────────────────────────────┐
 │  LAYER 3: OUTPUT VALIDATION                         │
 │  - JSON schema enforcement                          │
-│  - declared_count === actual_findings.length        │
+│  - actual_count within [min_estimate, max_estimate]│
 │  - No ID gaps, no placeholders                      │
 └─────────────────────────────────────────────────────┘
 ```
@@ -88,42 +91,59 @@ You MUST follow this THREE-PHASE process:
 
 ---
 
-### PHASE 1: PRE-ANALYSIS COUNTING (MANDATORY)
+### PHASE 1: PRE-ANALYSIS ESTIMATION (MANDATORY)
 
-Before analyzing ANY code, complete this count table:
+**Step 1**: Run preliminary grep/pattern scan to estimate finding count
 
-| Finding Category | Files to Scan | Expected Count | Priority |
-|------------------|---------------|----------------|----------|
-| [Category 1]     | X files       | ~Y findings    | CRITICAL |
-| [Category 2]     | Z files       | ~W findings    | HIGH     |
-| ...              | ...           | ...            | ...      |
-| **TOTAL**        | **N files**   | **~M findings**| **ALL**  |
+**Step 2**: Complete this estimation table with confidence intervals:
+
+| Finding Category | Files to Scan | Estimate Range | Confidence | Priority |
+|------------------|---------------|----------------|------------|----------|
+| [Category 1]     | X files       | Y-Z findings   | ±30%       | CRITICAL |
+| [Category 2]     | W files       | A-B findings   | ±20%       | HIGH     |
+| ...              | ...           | ...            | ...        | ...      |
+| **TOTAL**        | **N files**   | **M-P findings**| **±25%**  | **ALL**  |
 
 **Example for Security Agent**:
 
-| Finding Category | Files to Scan | Expected Count | Priority |
-|------------------|---------------|----------------|----------|
-| SQL Injection    | 8 repositories| ~15 findings   | CRITICAL |
-| Missing Auth     | 6 controllers | ~12 findings   | CRITICAL |
-| Hardcoded Secrets| All .yml/.properties| ~5 findings| HIGH |
-| Input Validation | 6 controllers | ~20 findings   | HIGH     |
-| **TOTAL**        | **~30 files** | **~52 findings**| **ALL** |
+```bash
+# Step 1: Run preliminary scans
+grep -r "createNativeQuery.*+" --include="*.java" | wc -l  # Returns: 8
+grep -r "@PostMapping\|@GetMapping" --include="*Controller.java" -A 3 | grep -v "@PreAuthorize" | wc -l  # Returns: ~20
+grep -r "password.*=.*\"" --include="*.yml" | wc -l  # Returns: 3
+```
+
+| Finding Category | Files to Scan | Estimate Range | Confidence | Priority |
+|------------------|---------------|----------------|------------|----------|
+| SQL Injection    | 8 repositories| 8-15 findings  | ±40%       | CRITICAL |
+| Missing Auth     | 6 controllers | 15-30 findings | ±30%       | CRITICAL |
+| Hardcoded Secrets| All .yml/.properties| 3-7 findings| ±50%  | HIGH |
+| Input Validation | 6 controllers | 10-25 findings | ±35%       | HIGH     |
+| **TOTAL**        | **~30 files** | **36-77 findings**| **±35%** | **ALL** |
 
 **Output Format**:
 ```json
 {
-  "pre_analysis_count": {
-    "declared_finding_count": 52,
+  "pre_analysis_estimation": {
+    "estimated_range": {"min": 36, "max": 77},
+    "confidence_level": "MEDIUM (±35%)",
     "files_to_analyze": 30,
     "categories": {
-      "SQL_INJECTION": 15,
-      "MISSING_AUTH": 12,
-      "HARDCODED_SECRETS": 5,
-      "INPUT_VALIDATION": 20
-    }
+      "SQL_INJECTION": {"min": 8, "max": 15},
+      "MISSING_AUTH": {"min": 15, "max": 30},
+      "HARDCODED_SECRETS": {"min": 3, "max": 7},
+      "INPUT_VALIDATION": {"min": 10, "max": 25}
+    },
+    "estimation_method": "Preliminary grep scan + manual extrapolation"
   }
 }
 ```
+
+**Why Estimation vs Exact Count?**
+- You cannot know exact count without analyzing the code
+- Estimation based on pattern scans is realistic and achievable
+- Confidence intervals account for uncertainty
+- Validation checks if actual is within range (not exact match)
 
 ---
 
@@ -153,9 +173,16 @@ As you extract findings, report progress every 10%:
 **Rules**:
 - Report progress every 10% (or every 10 findings, whichever comes first)
 - List the specific finding IDs extracted in each batch
-- Final count MUST match declared count from Phase 1
-- If you find MORE than declared, UPDATE the count and continue
-- If you find LESS, explain which categories had fewer findings
+- Final count should fall within estimated range from Phase 1
+- If you find MORE than max estimate, UPDATE the range and continue
+- If you find LESS than min estimate, explain which categories had fewer findings
+
+**Progressive Writing (Context Management)**:
+Write findings to disk based on context usage (dynamic interval):
+- IF context_usage < 70%: write every 50 findings
+- ELIF context_usage 70-85%: write every 25 findings
+- ELIF context_usage 85-95%: write every 10 findings
+- ELIF context_usage > 95%: write immediately and clear context
 
 ---
 
@@ -167,34 +194,44 @@ Your final output MUST pass these validations:
 {
   "analysis_metadata": {
     "agent_type": "security",
-    "declared_count": 52,
-    "actual_count": 52,
+    "estimated_range": {"min": 36, "max": 77},
+    "actual_count": 65,
+    "within_estimate": true,
+    "variance": "+18% from midpoint",
+    "confidence_level": "HIGH",
     "completeness": "100%",
     "status": "COMPLETE"
   },
-  "findings": [
-    { "id": "SEC-001", ... },
-    { "id": "SEC-002", ... },
-    // ... EXACTLY 52 findings
-    { "id": "SEC-052", ... }
-  ],
+  "findings_written_to": "security_findings.md",
+  "breakdown": {
+    "CRITICAL": 40,
+    "HIGH": 20,
+    "MEDIUM": 5,
+    "LOW": 0
+  },
   "validation": {
-    "id_sequence_valid": true,     // SEC-001 to SEC-052, no gaps
-    "no_duplicates": true,          // All IDs unique
-    "all_have_evidence": true,      // All have code_snippet
+    "id_sequence_valid": true,           // SEC-001 to SEC-065, no gaps
+    "no_duplicates": true,                // All IDs unique
+    "all_have_evidence": true,            // All have code_snippet
     "all_have_recommendations": true,
-    "counts_match": true            // declared === actual
+    "within_estimated_range": true,       // 65 within [36, 77] ✓
+    "findings_on_disk": true              // Written to disk progressively
   }
 }
 ```
 
-**REJECTION CRITERIA** (if ANY of these is true, output is INVALID):
+**VALIDATION CRITERIA** (v3.0):
 
-❌ `findings.length < declared_count` → **INCOMPLETE**
+✅ `actual_count within [min_estimate, max_estimate]` → **VALID**
+✅ If outside range: Document reason (e.g., "Found more complex issues than grep detected") → **ACCEPTABLE**
 ❌ Any finding missing required fields → **INVALID SCHEMA**
 ❌ ID gaps (e.g., SEC-005 exists but SEC-004 is missing) → **SEQUENCE ERROR**
 ❌ Any placeholder text like "..." or "etc." or "and others" → **SUMMARIZATION DETECTED**
 ❌ Any statement like "similar issues in 5 other files" → **VIOLATION**
+
+**Key Change from v2.3**:
+- OLD: `declared_count === actual_count` (impossible to satisfy)
+- NEW: `actual_count within [min, max]` OR documented variance (realistic)
 
 ---
 
@@ -406,24 +443,41 @@ The orchestrator should validate agent outputs:
 
 ```python
 def validate_agent_output(output_json, agent_name):
-    """Validate agent output for completeness"""
+    """Validate agent output for completeness (v3.0)"""
 
     # Check metadata exists
     if 'analysis_metadata' not in output_json:
         raise ValueError(f"{agent_name}: Missing analysis_metadata")
 
     metadata = output_json['analysis_metadata']
-    findings = output_json['findings']
 
-    # Check counts match
-    declared = metadata.get('declared_count', 0)
-    actual = len(findings)
+    # v3.0: Check if findings written to disk (Progressive Writing)
+    if 'findings_written_to' in output_json:
+        # Findings on disk, not in JSON
+        actual = metadata.get('actual_count', 0)
+    else:
+        # Legacy: findings in JSON
+        findings = output_json.get('findings', [])
+        actual = len(findings)
 
-    if actual < declared:
-        raise ValueError(
-            f"{agent_name}: INCOMPLETE - Declared {declared} findings "
-            f"but only {actual} extracted. Missing {declared - actual} findings!"
-        )
+    # v3.0: Check if within estimated range
+    estimated_range = metadata.get('estimated_range', {})
+    min_estimate = estimated_range.get('min', 0)
+    max_estimate = estimated_range.get('max', 0)
+
+    if min_estimate > 0 and max_estimate > 0:
+        if actual < min_estimate:
+            # Check if variance documented
+            if 'variance_reason' not in metadata:
+                raise ValueError(
+                    f"{agent_name}: BELOW ESTIMATE - Found {actual} but estimated {min_estimate}-{max_estimate}. "
+                    f"Please document reason in 'variance_reason' field."
+                )
+        elif actual > max_estimate:
+            # Above estimate is OK if documented
+            if 'variance_reason' not in metadata:
+                print(f"⚠️ {agent_name}: Found {actual} findings (above max estimate {max_estimate}). Consider documenting reason.")
+
 
     # Check ID sequence
     ids = [f['id'] for f in findings]
@@ -577,7 +631,8 @@ Completeness enforcement transforms the framework from "best effort" to "guarant
 
 ---
 
-**Version**: 2.3
-**Compatibility**: Integrate with AGENT-PROMPTS.md v2.3
+**Version**: 3.0
+**Compatibility**: Integrate with AGENT-PROMPTS.md v3.0, FRAMEWORK-RULES-HIERARCHY.md
 **Author**: Framework Enhancement Initiative
 **Last Updated**: 2025-10-12
+**Breaking Changes**: Pre-Analysis Count → Estimation with confidence intervals, validation changed from exact match to range check

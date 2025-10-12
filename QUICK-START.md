@@ -1,6 +1,10 @@
-# QUICK START GUIDE
+# QUICK START GUIDE v3.0
 
-Get started with the Universal Code Analysis Framework in 30 minutes.
+Get started with the Universal Code Analysis Framework v3.0 in 30 minutes.
+
+**Version**: 3.0
+**Date**: 2025-10-12
+**Key Changes from v2.4**: Pre-Analysis Estimation (not exact count), Count-based sampling rules, Dynamic write intervals
 
 ---
 

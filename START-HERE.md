@@ -1,9 +1,13 @@
 # START HERE - AI Model Reading Guide
 ## Claude Code Review Framework
 
-**Version**: 2.4
+**Version**: 3.0
 **Last Updated**: 2025-10-12
 **Audience**: AI Models (Claude, GPT, etc.) tasked with code review
+**Breaking Changes from v2.4**:
+- Pre-Analysis Counting → Estimation with confidence intervals
+- Fixed "5 samples" → Count-based sampling (MEDIUM <20=ALL, LOW <15=ALL)
+- Sampling threshold: >500K LOC (was >100K LOC)
 
 ---
 
@@ -22,7 +26,8 @@ Check ONE option that matches your target codebase:
 
 - [ ] **< 50K LOC** → Read Steps 1-4, use Standard Output
 - [ ] **50-100K LOC** → Read Steps 1-5.5, consider Progressive Writing
-- [ ] **> 100K LOC** → Read Steps 1-5.6 **MANDATORY**, use Progressive Writing
+- [ ] **100-500K LOC** → Read Steps 1-5.6 **MANDATORY**, use Progressive Writing
+- [ ] **> 500K LOC** → Read Steps 1-5.6 **MANDATORY**, use Progressive Writing + Strategic Sampling (40% minimum)
 
 ### 2. Expected Findings Assessment
 Estimate from pattern scan results:
@@ -59,7 +64,7 @@ Estimate from pattern scan results:
 
 ---
 
-### Step 2: Understand Completeness Enforcement
+### Step 2: Understand Completeness Enforcement (v3.0)
 **File**: `COMPLETENESS-ENFORCEMENT.md`
 **Time**: 5 minutes
 **Purpose**: Learn the **THREE-PHASE** process that prevents you from summarizing findings
@@ -68,15 +73,16 @@ Estimate from pattern scan results:
 - ❌ "Found 8 SQL injection vulnerabilities"
 - ✅ Instead of listing all 8 individually with file:line
 
-**Key Concepts**:
-- Phase 1: Pre-Analysis Counting
+**Key Concepts (v3.0)**:
+- Phase 1: Pre-Analysis ESTIMATION (confidence intervals [min, max])
 - Phase 2: Progressive Extraction (10% checkpoints)
-- Phase 3: Output Validation
+- Phase 3: Output Validation (range-based, not exact match)
 
 **After reading, you MUST**:
-- Always declare expected finding count BEFORE analyzing
+- Always estimate finding count range BEFORE analyzing (not exact count)
 - Report progress every 10%
-- Output JSON with `analysis_metadata` and `validation` blocks
+- Output JSON with `analysis_metadata` containing estimated_range and actual_count
+- Validate: actual_count within [min_estimate, max_estimate] OR document variance
 
 ---
 
@@ -147,7 +153,29 @@ Estimate from pattern scan results:
 
 ---
 
-### Step 5.5 (CRITICAL - NEW v2.2): Universal Context Management
+### Step 5.4 (NEW v3.0): Framework Rules Hierarchy
+**File**: `FRAMEWORK-RULES-HIERARCHY.md`
+**Time**: 5 minutes
+**Purpose**: Understand rule priority when conflicts arise
+**READ BEFORE executing agents to resolve contradictions**
+
+**Why Critical**: Framework v2.4 had conflicting rules. v3.0 defines priority hierarchy.
+
+**3-Level Hierarchy**:
+1. **PRIORITY 1: COMPLETENESS** (find all issues)
+2. **PRIORITY 2: CONTEXT MANAGEMENT** (compression technique)
+3. **PRIORITY 3: OUTPUT STRATEGY** (presentation format)
+
+**Conflict Resolution Example**:
+- Q: "I found 80 MEDIUM findings. Do I document all or sample?"
+- A: Priority 1 says find all (✅), Priority 2 says compress during analysis (✅), Priority 3 says present top 5 detailed + table (✅)
+- Result: Find all 80, write all 80 to disk, present 5 detailed + 75 in Quick Ref Table
+
+**Key Insight**: Completeness is about FINDING all issues, not PRESENTING all in full detail.
+
+---
+
+### Step 5.5 (CRITICAL - v3.0): Universal Context Management
 **File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md`
 **Time**: 8 minutes
 **Purpose**: Master smart compression for large codebases
@@ -155,11 +183,12 @@ Estimate from pattern scan results:
 
 **Why Critical**: Context window is limited (200K tokens). Large projects need intelligent compression.
 
-**Key Principles**:
+**Key Principles (v3.0)**:
 1. **Monitor context actively** (check every 10 files)
 2. **Equal domain priority** (25% Security, 25% Performance, 25% Concurrency, 25% Architecture)
-3. **Progressive compression** (full details → compressed → pattern codes)
-4. **Smart sampling** (for >100K LOC codebases)
+3. **Progressive compression** (during analysis only, expand for output)
+4. **Dynamic write intervals** (50/25/10/1 based on context usage 70%/85%/95%)
+5. **Strategic sampling** (only for >500K LOC codebases, minimum 40%)
 
 **Context Thresholds**:
 ```
@@ -170,11 +199,12 @@ Estimate from pattern scan results:
 >90%: Emergency output
 ```
 
-**Adaptive Strategies**:
+**Adaptive Strategies (v3.0)**:
 - **<10K LOC**: Single pass, full details
 - **10-50K LOC**: Layer-based chunks
-- **50-100K LOC**: Pattern-based chunks with compression
-- **>100K LOC**: Strategic sampling (60% coverage)
+- **50-100K LOC**: Progressive Writing, full analysis (100%)
+- **100-500K LOC**: Progressive Writing, full analysis (100%)
+- **>500K LOC**: Strategic sampling (40% minimum coverage)
 
 **Memory Management**:
 ```
@@ -197,8 +227,8 @@ Clear: File contents, duplicate patterns, boilerplate
 
 ---
 
-### Step 5.6 (⚠️ MANDATORY for >100K LOC - NEW v2.4): Progressive Writing Strategy
-**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Section: Progressive Writing v2.4)
+### Step 5.6 (⚠️ MANDATORY for >100K LOC - v3.0): Progressive Writing Strategy
+**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Section: Progressive Writing v3.0)
 **Time**: 5 minutes
 **Purpose**: Solve the 32K output token limit for large-scale analysis
 **⚠️ READ BEFORE analyzing codebases with >100K LOC or 100+ expected findings**
@@ -210,12 +240,11 @@ Clear: File contents, duplicate patterns, boilerplate
 Agent finds 250 issues → tries to return all in JSON → exceeds 32K token limit → ERROR
 ```
 
-**The Solution - Write-Clear-Continue Pattern**:
+**The Solution - Write-Clear-Continue Pattern (v3.0 with Dynamic Intervals)**:
 ```bash
 # Don't accumulate findings in memory, write incrementally to disk
 
 findings_count=0
-BATCH_SIZE=50
 
 for file in $(find . -name "*.java" | sort); do
     findings=$(analyze_security "$file")
@@ -225,16 +254,29 @@ for file in $(find . -name "*.java" | sort); do
         echo "$finding" >> security_findings.md
         findings_count=$((findings_count + 1))
 
-        # Every 50 findings, CLEAR from context
+        # v3.0: Dynamic write interval based on context usage
+        context_usage=$(get_context_usage_percentage)
+
+        if [ "$context_usage" -lt 70 ]; then
+            BATCH_SIZE=50
+        elif [ "$context_usage" -lt 85 ]; then
+            BATCH_SIZE=25
+        elif [ "$context_usage" -lt 95 ]; then
+            BATCH_SIZE=10
+        else
+            BATCH_SIZE=1  # Write immediately if >95%
+        fi
+
+        # CLEAR from context when threshold reached
         if [ $((findings_count % BATCH_SIZE)) -eq 0 ]; then
-            echo "[Progress] $findings_count findings written to disk"
+            echo "[Progress] $findings_count findings written (interval: $BATCH_SIZE)"
             # Context freed - can continue with constant memory
         fi
     done
 done
 ```
 
-**Agent Architecture (v2.4)**:
+**Agent Architecture (v3.0)**:
 - Each agent writes to **separate category file** with **Quick Reference Table**:
   - Security Agent → `security_findings.md` (with Quick Reference Table at top)
   - Performance Agent → `performance_findings.md` (with Quick Reference Table at top)
@@ -247,35 +289,51 @@ done
   "agent": "Security Agent",
   "status": "completed",
   "output_file": "security_findings.md",
-  "output_strategy": "v2.4",
+  "output_strategy": "v3.0_unified",
+  "analysis_metadata": {
+    "estimated_range": {"min": 200, "max": 300},
+    "actual_count": 250,
+    "within_estimate": true,
+    "variance": "-8% from midpoint"
+  },
   "findings_found": 250,
   "findings_documented": 250,
   "breakdown": {
-    "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
-    "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
-    "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
-    "LOW": {"found": 25, "detailed": 5, "in_table": 20}
+    "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0, "rule": "ALL"},
+    "HIGH": {"found": 32, "detailed": 32, "in_table": 0, "rule": "ALL"},
+    "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138, "rule": ">50=top5"},
+    "LOW": {"found": 25, "detailed": 8, "in_table": 17, "rule": "15-40=top8"}
   }
 }
 ```
 
-**Key Benefits (v2.4)**:
+**Key Benefits (v3.0)**:
 - ✅ **Constant Memory**: Write → Clear → Context stays at ~50KB regardless of findings
 - ✅ **No Output Overflow**: Return 2KB summary instead of 40KB+ findings
-- ✅ **Scales to 1M+ LOC**: Write 10,000 findings without hitting limits
-- ✅ **100% Documented**: ALL findings preserved (not sampled/omitted)
+- ✅ **Scales to 500K+ LOC**: Write 10,000 findings without hitting limits
+- ✅ **100% Documented**: ALL findings preserved (detailed or in Quick Reference Table)
 - ✅ **Quick Navigation**: Quick Reference Tables for instant location lookup
-- ✅ **67% Context Savings**: Proven on 138K LOC project (362+ findings)
+- ✅ **Count-Based Sampling**: MEDIUM <20=ALL, LOW <15=ALL (adaptive to finding count)
+- ✅ **Dynamic Intervals**: 50/25/10/1 based on context usage (70%/85%/95% thresholds)
+- ✅ **Pre-Analysis Estimation**: Confidence intervals [min, max] instead of exact counts
+- ✅ **67% Context Savings**: Proven on 138K LOC project (464 findings)
 
-**v2.4 Output Strategy**:
-- **ALL CRITICAL**: Detailed format (5 lines each) - no omissions
-- **ALL HIGH**: Detailed format (5 lines each) - no omissions
-- **5 MEDIUM samples**: Detailed format (representative examples)
-- **5 LOW samples**: Detailed format (representative examples)
-- **Remaining MEDIUM/LOW**: Quick Reference Table (1 line each with ID, severity, category, file:line, brief description)
+**v3.0 Unified Output Strategy (Count-Based)**:
+- **ALL CRITICAL**: Detailed format (5 lines each) - never sampled
+- **ALL HIGH**: Detailed format (5 lines each) - never sampled
+- **MEDIUM samples**: Count-based rules
+  - <20 total: ALL detailed
+  - 20-50 total: Top 10 detailed + Quick Reference Table
+  - >50 total: Top 5 detailed + Quick Reference Table
+- **LOW samples**: Count-based rules
+  - <15 total: ALL detailed
+  - 15-40 total: Top 8 detailed + Quick Reference Table
+  - >40 total: Top 3 detailed + Quick Reference Table
+- **Quick Reference Table**: 1 line each (ID, severity, category, file:line, brief description)
 
 **When to Use**:
-- Codebase >100K LOC
+- Codebase 100-500K LOC (full analysis with Progressive Writing)
+- Codebase >500K LOC (strategic sampling minimum 40%)
 - Expected findings >100 issues
 - Multiple parallel agents
 - Deep comprehensive analysis
@@ -298,18 +356,22 @@ done
 - Codebase < 100K LOC **AND**
 - Expected findings < 100 issues
 
-**How it works**:
+**How it works (v3.0)**:
 - Agents analyze code and accumulate findings in memory
 - Return complete JSON response with all findings
-- Validate: `declared_count === actual_count`
+- Validate: `actual_count` within `[min_estimate, max_estimate]`
 - Maximum output: ~30KB (safe within 32K token limit)
 
-**Agent response format**:
+**Agent response format (v3.0)**:
 ```json
 {
-  "analysis_metadata": { ... },
+  "analysis_metadata": {
+    "estimated_range": {"min": 40, "max": 80},
+    "actual_count": 65,
+    "within_estimate": true
+  },
   "findings": [ ... array of all findings ... ],
-  "validation": { "counts_match": true }
+  "validation": { "within_range": true }
 }
 ```
 
