@@ -1,10 +1,14 @@
-# AGENT PROMPT TEMPLATES v2.4
+# AGENT PROMPT TEMPLATES v3.0
 
 **Enhanced with Chain of Thought Reasoning + Progressive Writing Strategy + Quick Reference Tables**
 
-Version: 2.4
+Version: 3.0
 Date: 2025-10-12
 Framework: claude-code-review-framework
+Breaking Changes from v2.4:
+- Pre-Analysis Counting → Estimation with confidence intervals
+- Fixed "5 samples" → Count-based sampling rules (MEDIUM <20=ALL, LOW <15=ALL)
+- Unified output validation (range-based instead of exact match)
 
 ---
 
@@ -31,11 +35,19 @@ Framework: claude-code-review-framework
 
 ---
 
-## Improvements in v2.4 (NEW)
+## Improvements in v3.0 (NEW)
+
+- 🆕 **Pre-Analysis Estimation**: Agents declare confidence intervals [min, max] instead of exact counts
+- 🆕 **Count-Based Sampling**: MEDIUM (<20=ALL, 20-50=top 10, >50=top 5) + Quick Ref Tables
+- 🆕 **Count-Based Sampling**: LOW (<15=ALL, 15-40=top 8, >40=top 3) + Quick Ref Tables
+- 🆕 **Range Validation**: actual_count within [min_estimate, max_estimate] (not exact match)
+- 🆕 **Dynamic Write Intervals**: 50/25/10/1 based on context usage (70%/85%/95% thresholds)
+
+## Improvements in v2.4
 
 - 🆕 **Quick Reference Tables**: Every agent file starts with navigable table of ALL findings
 - 🆕 **Complete CRITICAL/HIGH Coverage**: ALL critical and high findings in detailed format (not just top 50)
-- 🆕 **Structured Sampling**: 5 MEDIUM + 5 LOW examples, rest in comprehensive table
+- 🆕 **Structured Sampling**: Representative samples + rest in comprehensive table
 - 🆕 **Enhanced Navigation**: ID-based referencing with file:line for instant location
 
 ## Improvements in v2.2
@@ -57,7 +69,7 @@ Framework: claude-code-review-framework
 
 ---
 
-## 🎯 CONTEXT-OPTIMIZED OUTPUT STRATEGY (v2.2)
+## 🎯 v3.0 UNIFIED OUTPUT STRATEGY
 
 ### Core Principle
 
@@ -65,14 +77,19 @@ Framework: claude-code-review-framework
 
 **Trade-off**: Maximize issue discovery > Minimize verbose solutions
 
-### Output Format Guidelines (v2.4)
+### Output Format Guidelines (v3.0 - Count-Based)
 
 **Prioritization Strategy**:
 1. **ALL CRITICAL findings** → Detailed format (5 lines each)
 2. **ALL HIGH findings** → Detailed format (5 lines each)
-3. **5 MEDIUM findings** → Detailed format (representative samples)
-4. **5 LOW findings** → Detailed format (representative samples)
-5. **Remaining MEDIUM/LOW** → Quick Reference Table (1 line each)
+3. **MEDIUM findings** → Count-based:
+   - If <20 total: ALL detailed
+   - If 20-50 total: Top 10 detailed + Quick Reference Table
+   - If >50 total: Top 5 detailed + Quick Reference Table
+4. **LOW findings** → Count-based:
+   - If <15 total: ALL detailed
+   - If 15-40 total: Top 8 detailed + Quick Reference Table
+   - If >40 total: Top 3 detailed + Quick Reference Table
 
 **Detailed Format** (for CRITICAL/HIGH/sample MEDIUM/LOW):
 ```markdown
@@ -109,22 +126,31 @@ Framework: claude-code-review-framework
 - 1-2 line problem description
 - 1 line fix hint
 
-### Context Savings Example (v2.4)
+### Context Savings Example (v3.0)
 
-**Example** (300 findings total: 100 CRIT, 100 HIGH, 80 MEDIUM, 20 LOW):
+**Example A** (300 findings: 100 CRIT, 100 HIGH, 80 MEDIUM, 20 LOW):
 - 100 CRITICAL detailed (5 lines each) = 500 lines
 - 100 HIGH detailed (5 lines each) = 500 lines
-- 5 MEDIUM samples detailed (5 lines each) = 25 lines
-- 5 LOW samples detailed (5 lines each) = 25 lines
-- 75 MEDIUM + 15 LOW in table (1 line each) = 90 lines
-- Quick Reference Table header = 10 lines
-- **Total**: ~1150 lines (~30KB context)
+- 5 MEDIUM samples detailed (>50 rule: top 5) = 25 lines
+- 8 LOW samples detailed (15-40 rule: top 8) = 40 lines
+- 75 MEDIUM in Quick Ref Table (1 line each) = 75 lines
+- 12 LOW in Quick Ref Table (1 line each) = 12 lines
+- Table headers = 10 lines
+- **Total**: ~1162 lines (~30KB context)
 
-**Benefit**: 100% CRITICAL/HIGH detailed + representative samples + complete index
+**Example B** (80 findings: 8 CRIT, 32 HIGH, 18 MEDIUM, 22 LOW):
+- 8 CRITICAL detailed = 40 lines
+- 32 HIGH detailed = 160 lines
+- 18 MEDIUM detailed (<20 rule: ALL) = 90 lines
+- 8 LOW detailed (15-40 rule: top 8) = 40 lines
+- 14 LOW in Quick Ref Table = 14 lines
+- **Total**: ~344 lines (~9KB context)
+
+**Benefit**: 100% CRITICAL/HIGH detailed + count-based sampling + complete index
 
 ---
 
-## 📝 PROGRESSIVE WRITING PATTERN (v2.3)
+## 📝 PROGRESSIVE WRITING PATTERN (v3.0)
 
 ### When to Use
 
@@ -173,14 +199,27 @@ for file in $(find . -name "*.java" | sort); do
         findings_batch+="$finding"$'\n---\n'
         findings_count=$((findings_count + 1))
 
-        # Every 50 findings, FLUSH TO DISK
+        # v3.0: Dynamic write interval based on context usage
+        context_usage=$(get_context_usage_percentage)
+
+        if [ "$context_usage" -lt 70 ]; then
+            BATCH_SIZE=50
+        elif [ "$context_usage" -lt 85 ]; then
+            BATCH_SIZE=25
+        elif [ "$context_usage" -lt 95 ]; then
+            BATCH_SIZE=10
+        else
+            BATCH_SIZE=1  # Write immediately if >95%
+        fi
+
+        # FLUSH TO DISK when threshold reached
         if [ $((findings_count % BATCH_SIZE)) -eq 0 ]; then
             echo "$findings_batch" >> "$OUTPUT_FILE"
 
             # CRITICAL: Clear from context
             findings_batch=""
 
-            echo "[Progress] $findings_count findings written to disk"
+            echo "[Progress] $findings_count findings written (interval: $BATCH_SIZE)"
         fi
     done
 done
@@ -193,11 +232,11 @@ fi
 echo "[Complete] Total $findings_count findings written"
 ```
 
-#### Step 3: Apply v2.4 Output Strategy
+#### Step 3: Apply v3.0 Unified Output Strategy
 
 ```bash
-# After ALL findings written, apply v2.4 output strategy
-apply_v2_4_strategy() {
+# After ALL findings written, apply v3.0 unified output strategy (count-based)
+apply_v3_0_strategy() {
     local file=$1
 
     # Count by severity
@@ -208,14 +247,12 @@ apply_v2_4_strategy() {
 
     echo "Found: CRIT=$critical_count HIGH=$high_count MED=$medium_count LOW=$low_count"
 
-    # v2.4 Strategy:
-    # - Keep ALL CRITICAL detailed (5 lines each)
-    # - Keep ALL HIGH detailed (5 lines each)
-    # - Keep 5 MEDIUM samples detailed (5 lines each)
-    # - Keep 5 LOW samples detailed (5 lines each)
-    # - Put remaining MEDIUM/LOW in Quick Reference Table
+    # v3.0 Unified Strategy (count-based rules):
+    # CRITICAL: ALL detailed
+    # HIGH: ALL detailed
+    # MEDIUM: <20=ALL, 20-50=top 10, >50=top 5
+    # LOW: <15=ALL, 15-40=top 8, >40=top 3
 
-    # Create output file with detailed findings
     detailed="${file}.detailed"
 
     # Keep all CRITICAL (detailed format)
@@ -224,27 +261,45 @@ apply_v2_4_strategy() {
     # Keep all HIGH (detailed format)
     grep -A 4 "^### HIGH-" "$file" >> "$detailed"
 
-    # Keep 5 MEDIUM samples (detailed format)
-    grep -A 4 "^### MED-" "$file" | head -n 25 >> "$detailed"
+    # MEDIUM: count-based rules
+    if [ "$medium_count" -lt 20 ]; then
+        medium_detailed=$medium_count
+        grep -A 4 "^### MED-" "$file" >> "$detailed"
+    elif [ "$medium_count" -le 50 ]; then
+        medium_detailed=10
+        grep -A 4 "^### MED-" "$file" | head -n 50 >> "$detailed"
+    else
+        medium_detailed=5
+        grep -A 4 "^### MED-" "$file" | head -n 25 >> "$detailed"
+    fi
 
-    # Keep 5 LOW samples (detailed format)
-    grep -A 4 "^### LOW-" "$file" | head -n 25 >> "$detailed"
-
-    # Calculate Quick Reference Table entries
-    medium_in_table=$((medium_count > 5 ? medium_count - 5 : 0))
-    low_in_table=$((low_count > 5 ? low_count - 5 : 0))
+    # LOW: count-based rules
+    if [ "$low_count" -lt 15 ]; then
+        low_detailed=$low_count
+        grep -A 4 "^### LOW-" "$file" >> "$detailed"
+    elif [ "$low_count" -le 40 ]; then
+        low_detailed=8
+        grep -A 4 "^### LOW-" "$file" | head -n 40 >> "$detailed"
+    else
+        low_detailed=3
+        grep -A 4 "^### LOW-" "$file" | head -n 15 >> "$detailed"
+    fi
 
     mv "$detailed" "$file"
 
-    detailed_count=$((critical_count + high_count + (medium_count < 5 ? medium_count : 5) + (low_count < 5 ? low_count : 5)))
+    # Calculate Quick Reference Table entries
+    medium_in_table=$((medium_count > medium_detailed ? medium_count - medium_detailed : 0))
+    low_in_table=$((low_count > low_detailed ? low_count - low_detailed : 0))
+
+    detailed_count=$((critical_count + high_count + medium_detailed + low_detailed))
     table_count=$((medium_in_table + low_in_table))
     total=$((detailed_count + table_count))
 
-    echo "v2.4 Output Strategy Applied:"
+    echo "v3.0 Unified Output Strategy Applied:"
     echo "  - ALL CRITICAL detailed: $critical_count"
     echo "  - ALL HIGH detailed: $high_count"
-    echo "  - MEDIUM samples detailed: $((medium_count < 5 ? medium_count : 5))"
-    echo "  - LOW samples detailed: $((low_count < 5 ? low_count : 5))"
+    echo "  - MEDIUM detailed: $medium_detailed (total: $medium_count)"
+    echo "  - LOW detailed: $low_detailed (total: $low_count)"
     echo "  - MEDIUM in Quick Reference: $medium_in_table"
     echo "  - LOW in Quick Reference: $low_in_table"
     echo "  - Total detailed: $detailed_count"
@@ -252,10 +307,10 @@ apply_v2_4_strategy() {
     echo "  - TOTAL DOCUMENTED: $total (100%)"
 }
 
-apply_v2_4_strategy "$OUTPUT_FILE"
+apply_v3_0_strategy "$OUTPUT_FILE"
 ```
 
-### Agent Output File Structure (MANDATORY v2.4)
+### Agent Output File Structure (MANDATORY v3.0)
 
 Each agent MUST structure their output file with this exact format:
 
@@ -327,35 +382,42 @@ Agent final response should be SUMMARY only:
   "agent": "Security Agent",
   "status": "completed",
   "output_file": "security_findings.md",
-  "output_strategy": "v2.4",
+  "output_strategy": "v3.0_unified",
+  "analysis_metadata": {
+    "estimated_range": {"min": 200, "max": 300},
+    "actual_count": 250,
+    "within_estimate": true,
+    "variance": "-8% from midpoint"
+  },
   "findings_found": 250,
   "findings_documented": 250,
   "breakdown": {
-    "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0},
-    "HIGH": {"found": 32, "detailed": 32, "in_table": 0},
-    "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138},
-    "LOW": {"found": 25, "detailed": 5, "in_table": 20}
+    "CRITICAL": {"found": 50, "detailed": 50, "in_table": 0, "rule": "ALL"},
+    "HIGH": {"found": 32, "detailed": 32, "in_table": 0, "rule": "ALL"},
+    "MEDIUM": {"found": 143, "detailed": 5, "in_table": 138, "rule": ">50=top5"},
+    "LOW": {"found": 25, "detailed": 8, "in_table": 17, "rule": "15-40=top8"}
   },
   "quick_reference_table": {
     "included": true,
     "total_entries": 250,
-    "detailed_findings": 92,
-    "table_only_findings": 158,
+    "detailed_findings": 95,
+    "table_only_findings": 155,
     "location": "Top of security_findings.md"
   },
   "context_usage": "48%"
 }
 ```
 
-### Benefits (v2.4)
+### Benefits (v3.0)
 
-- **Complete CRITICAL/HIGH Coverage**: Every critical and high priority issue documented in detail
+- **Complete CRITICAL/HIGH Coverage**: Every critical and high priority issue documented in detail (never sampled)
 - **Quick Navigation**: Reference table at top of file for instant finding lookup
-- **Representative Sampling**: 5 examples each for MEDIUM/LOW to understand patterns
-- **Context Usage**: Constant ~50KB (not growing)
+- **Count-Based Sampling**: Intelligent rules (MEDIUM <20=ALL, LOW <15=ALL) adapt to finding count
+- **Pre-Analysis Estimation**: Confidence intervals [min, max] instead of impossible exact counts
+- **Context Usage**: Constant ~50KB (not growing), dynamic write intervals (50/25/10/1)
 - **No Output Overflow**: Files written to disk, not returned
-- **100% Documented**: All findings in Quick Reference Table, detailed or sampled
-- **Scalability**: Works for 1M LOC codebases
+- **100% Documented**: All findings in Quick Reference Table, detailed or sampled based on count
+- **Scalability**: Works for 500K+ LOC codebases with strategic sampling
 
 ---
 
@@ -776,6 +838,90 @@ Before starting analysis:
 See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 ```
 
+## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+
+**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+
+### File Structure (NON-NEGOTIABLE):
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
+...
+| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+
+---
+
+## Detailed Findings
+
+### [PREFIX]-001: Title
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [PREFIX]-002: Title
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+```
+
+### ⚠️ CRITICAL REQUIREMENTS:
+
+1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
+2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
+3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
+4. **Detailed Findings MUST follow** the Quick Reference Table
+5. **v2.4 Strategy**:
+   - ALL CRITICAL findings → Detailed format
+   - ALL HIGH findings → Detailed format
+   - 5 MEDIUM samples → Detailed format (representative examples)
+   - 5 LOW samples → Detailed format (representative examples)
+   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+
+### ❌ INVALID OUTPUT (Will be REJECTED):
+
+- ❌ Missing Quick Reference Table
+- ❌ Quick Reference Table not at top of file
+- ❌ Quick Reference Table incomplete (missing findings)
+- ❌ No detailed findings section
+- ❌ CRITICAL/HIGH findings not all detailed
+
+### ✅ VALID OUTPUT Checklist:
+
+- ✅ Quick Reference Table at top with ALL findings
+- ✅ All CRITICAL detailed (no exceptions)
+- ✅ All HIGH detailed (no exceptions)
+- ✅ 5 MEDIUM samples detailed
+- ✅ 5 LOW samples detailed
+- ✅ Correct markdown formatting
+- ✅ All findings have file:line references
+
+**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
+
 ### Bash Toolkit
 
 ```bash
@@ -983,6 +1129,90 @@ Before starting analysis:
 See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 ```
 
+## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+
+**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+
+### File Structure (NON-NEGOTIABLE):
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
+...
+| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+
+---
+
+## Detailed Findings
+
+### [PREFIX]-001: Title
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [PREFIX]-002: Title
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+```
+
+### ⚠️ CRITICAL REQUIREMENTS:
+
+1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
+2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
+3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
+4. **Detailed Findings MUST follow** the Quick Reference Table
+5. **v2.4 Strategy**:
+   - ALL CRITICAL findings → Detailed format
+   - ALL HIGH findings → Detailed format
+   - 5 MEDIUM samples → Detailed format (representative examples)
+   - 5 LOW samples → Detailed format (representative examples)
+   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+
+### ❌ INVALID OUTPUT (Will be REJECTED):
+
+- ❌ Missing Quick Reference Table
+- ❌ Quick Reference Table not at top of file
+- ❌ Quick Reference Table incomplete (missing findings)
+- ❌ No detailed findings section
+- ❌ CRITICAL/HIGH findings not all detailed
+
+### ✅ VALID OUTPUT Checklist:
+
+- ✅ Quick Reference Table at top with ALL findings
+- ✅ All CRITICAL detailed (no exceptions)
+- ✅ All HIGH detailed (no exceptions)
+- ✅ 5 MEDIUM samples detailed
+- ✅ 5 LOW samples detailed
+- ✅ Correct markdown formatting
+- ✅ All findings have file:line references
+
+**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
+
 ### Bash Toolkit
 
 ```bash
@@ -1176,6 +1406,90 @@ Before starting analysis:
 See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 ```
 
+## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+
+**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+
+### File Structure (NON-NEGOTIABLE):
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
+...
+| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+
+---
+
+## Detailed Findings
+
+### [PREFIX]-001: Title
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [PREFIX]-002: Title
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+```
+
+### ⚠️ CRITICAL REQUIREMENTS:
+
+1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
+2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
+3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
+4. **Detailed Findings MUST follow** the Quick Reference Table
+5. **v2.4 Strategy**:
+   - ALL CRITICAL findings → Detailed format
+   - ALL HIGH findings → Detailed format
+   - 5 MEDIUM samples → Detailed format (representative examples)
+   - 5 LOW samples → Detailed format (representative examples)
+   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+
+### ❌ INVALID OUTPUT (Will be REJECTED):
+
+- ❌ Missing Quick Reference Table
+- ❌ Quick Reference Table not at top of file
+- ❌ Quick Reference Table incomplete (missing findings)
+- ❌ No detailed findings section
+- ❌ CRITICAL/HIGH findings not all detailed
+
+### ✅ VALID OUTPUT Checklist:
+
+- ✅ Quick Reference Table at top with ALL findings
+- ✅ All CRITICAL detailed (no exceptions)
+- ✅ All HIGH detailed (no exceptions)
+- ✅ 5 MEDIUM samples detailed
+- ✅ 5 LOW samples detailed
+- ✅ Correct markdown formatting
+- ✅ All findings have file:line references
+
+**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
+
 ### Bash Toolkit
 
 ```bash
@@ -1350,6 +1664,90 @@ Before starting analysis:
 
 See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 ```
+
+## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+
+**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+
+### File Structure (NON-NEGOTIABLE):
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
+...
+| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+
+---
+
+## Detailed Findings
+
+### [PREFIX]-001: Title
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [PREFIX]-002: Title
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+```
+
+### ⚠️ CRITICAL REQUIREMENTS:
+
+1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
+2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
+3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
+4. **Detailed Findings MUST follow** the Quick Reference Table
+5. **v2.4 Strategy**:
+   - ALL CRITICAL findings → Detailed format
+   - ALL HIGH findings → Detailed format
+   - 5 MEDIUM samples → Detailed format (representative examples)
+   - 5 LOW samples → Detailed format (representative examples)
+   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+
+### ❌ INVALID OUTPUT (Will be REJECTED):
+
+- ❌ Missing Quick Reference Table
+- ❌ Quick Reference Table not at top of file
+- ❌ Quick Reference Table incomplete (missing findings)
+- ❌ No detailed findings section
+- ❌ CRITICAL/HIGH findings not all detailed
+
+### ✅ VALID OUTPUT Checklist:
+
+- ✅ Quick Reference Table at top with ALL findings
+- ✅ All CRITICAL detailed (no exceptions)
+- ✅ All HIGH detailed (no exceptions)
+- ✅ 5 MEDIUM samples detailed
+- ✅ 5 LOW samples detailed
+- ✅ Correct markdown formatting
+- ✅ All findings have file:line references
+
+**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
 
 ### Bash Toolkit
 
@@ -1544,6 +1942,90 @@ Before starting analysis:
 
 See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 ```
+
+## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+
+**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+
+### File Structure (NON-NEGOTIABLE):
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
+...
+| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+
+---
+
+## Detailed Findings
+
+### [PREFIX]-001: Title
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [PREFIX]-002: Title
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+```
+
+### ⚠️ CRITICAL REQUIREMENTS:
+
+1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
+2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
+3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
+4. **Detailed Findings MUST follow** the Quick Reference Table
+5. **v2.4 Strategy**:
+   - ALL CRITICAL findings → Detailed format
+   - ALL HIGH findings → Detailed format
+   - 5 MEDIUM samples → Detailed format (representative examples)
+   - 5 LOW samples → Detailed format (representative examples)
+   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+
+### ❌ INVALID OUTPUT (Will be REJECTED):
+
+- ❌ Missing Quick Reference Table
+- ❌ Quick Reference Table not at top of file
+- ❌ Quick Reference Table incomplete (missing findings)
+- ❌ No detailed findings section
+- ❌ CRITICAL/HIGH findings not all detailed
+
+### ✅ VALID OUTPUT Checklist:
+
+- ✅ Quick Reference Table at top with ALL findings
+- ✅ All CRITICAL detailed (no exceptions)
+- ✅ All HIGH detailed (no exceptions)
+- ✅ 5 MEDIUM samples detailed
+- ✅ 5 LOW samples detailed
+- ✅ Correct markdown formatting
+- ✅ All findings have file:line references
+
+**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
 
 ### Bash Toolkit
 
@@ -1740,6 +2222,90 @@ Before starting analysis:
 
 See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 ```
+
+## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+
+**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+
+### File Structure (NON-NEGOTIABLE):
+
+```markdown
+# [Domain] Findings
+
+## Quick Reference Table
+
+**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
+| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
+| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
+...
+| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+
+**Category Breakdown**:
+- [CATEGORY_1]: X findings
+- [CATEGORY_2]: Y findings
+
+---
+
+## Detailed Findings
+
+### [PREFIX]-001: Title
+**File**: `path/file.ext:123`
+**Severity**: CRITICAL
+**Category**: [CATEGORY]
+**Problem**: [Description]
+**Impact**: [Impact assessment]
+**Fix**: [Remediation]
+
+---
+
+### [PREFIX]-002: Title
+**File**: `path/file.ext:456`
+**Severity**: CRITICAL
+...
+
+---
+
+[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+```
+
+### ⚠️ CRITICAL REQUIREMENTS:
+
+1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
+2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
+3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
+4. **Detailed Findings MUST follow** the Quick Reference Table
+5. **v2.4 Strategy**:
+   - ALL CRITICAL findings → Detailed format
+   - ALL HIGH findings → Detailed format
+   - 5 MEDIUM samples → Detailed format (representative examples)
+   - 5 LOW samples → Detailed format (representative examples)
+   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+
+### ❌ INVALID OUTPUT (Will be REJECTED):
+
+- ❌ Missing Quick Reference Table
+- ❌ Quick Reference Table not at top of file
+- ❌ Quick Reference Table incomplete (missing findings)
+- ❌ No detailed findings section
+- ❌ CRITICAL/HIGH findings not all detailed
+
+### ✅ VALID OUTPUT Checklist:
+
+- ✅ Quick Reference Table at top with ALL findings
+- ✅ All CRITICAL detailed (no exceptions)
+- ✅ All HIGH detailed (no exceptions)
+- ✅ 5 MEDIUM samples detailed
+- ✅ 5 LOW samples detailed
+- ✅ Correct markdown formatting
+- ✅ All findings have file:line references
+
+**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
 
 ### Bash Toolkit
 

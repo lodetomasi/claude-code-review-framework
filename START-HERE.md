@@ -1,6 +1,12 @@
 # START HERE - Universal Code Review Framework Guide
 
-**The definitive entry point for both AI models and human developers**
+**Version**: 3.0
+**Last Updated**: 2025-10-12
+**Audience**: AI Models (Claude, GPT, etc.) and Human Developers
+**Breaking Changes from v2.4**:
+- Pre-Analysis Counting → Estimation with confidence intervals
+- Fixed "5 samples" → Count-based sampling (MEDIUM <20=ALL, LOW <15=ALL)
+- Sampling threshold: >500K LOC (was >100K LOC)
 
 ---
 
@@ -13,8 +19,287 @@ Choose your path based on your role and needs:
 | **Human Developer** | 5 minutes | [→ 5-Minute Quick Scan](#5-minute-quick-scan) |
 | **Human Developer** | 30+ minutes | [→ Full Analysis Workflow](#full-analysis-workflow) |
 | **AI Model** | Any | [→ AI Model Instructions](#ai-model-instructions-mandatory) |
-| **Looking for Examples** | Any | [→ Real-World Examples](#real-world-examples) |
+| **Looking for Examples** | Any | [→ EXAMPLES.md](EXAMPLES.md) |
+| **Need Scripts** | Any | [→ SCRIPTS.md](SCRIPTS.md) |
 | **Need Help** | Any | [→ Troubleshooting](#troubleshooting) |
+
+---
+
+## BEFORE YOU START - Critical Assessment
+
+### 1. Codebase Size Assessment
+Check ONE option that matches your target codebase:
+
+- [ ] **< 50K LOC** → Read Steps 1-4, use Standard Output
+- [ ] **50-100K LOC** → Read Steps 1-5.5, consider Progressive Writing
+- [ ] **100-500K LOC** → Read Steps 1-5.6 **MANDATORY**, use Progressive Writing
+- [ ] **> 500K LOC** → Read Steps 1-5.6 **MANDATORY**, use Progressive Writing + Strategic Sampling (40% minimum)
+
+### 2. Expected Findings Assessment
+Estimate from pattern scan results:
+
+- [ ] **< 50 issues** → Standard output acceptable
+- [ ] **50-100 issues** → Progressive Writing recommended
+- [ ] **> 100 issues** → Progressive Writing **MANDATORY**
+
+### 🚨 CRITICAL DECISION RULES
+
+**IF you checked ANY rightmost option above**:
+- ⛔ **DO NOT** skip Step 5.6 (Progressive Writing Strategy)
+- ⛔ **DO NOT** attempt standard output (will cause 32K token overflow ERROR)
+- ✅ **YOU MUST** use write-clear-continue pattern
+- ✅ **YOU MUST** write to separate files per agent
+- ✅ **YOU MUST** return summary only (not full findings)
+
+**IF unsure**: Use Progressive Writing (always works, never fails)
+
+**Consequences of wrong choice**:
+- 200+ findings with standard output → **32,000 TOKEN OVERFLOW ERROR** 💥
+- 50 findings with progressive writing → Works but unnecessary overhead ✅
+
+**Golden rule**: **When in doubt, use Progressive Writing**
+
+---
+
+## 📖 READING ORDER (MANDATORY)
+
+### Step 1: Read This File First
+**File**: `START-HERE.md` (current file)
+**Time**: 2 minutes
+**Purpose**: Understand the reading sequence
+
+---
+
+### Step 2: Understand Completeness Enforcement (v3.0)
+**File**: `COMPLETENESS-ENFORCEMENT.md`
+**Time**: 5 minutes
+**Purpose**: Learn the **THREE-PHASE** process that prevents you from summarizing findings
+
+**Why Critical**: Without reading this, you WILL make the mistake of writing:
+- ❌ "Found 8 SQL injection vulnerabilities"
+- ✅ Instead of listing all 8 individually with file:line
+
+**Key Concepts (v3.0)**:
+- Phase 1: Pre-Analysis ESTIMATION (confidence intervals [min, max])
+- Phase 2: Progressive Extraction (10% checkpoints)
+- Phase 3: Output Validation (range-based, not exact match)
+
+**After reading, you MUST**:
+- Always estimate finding count range BEFORE analyzing (not exact count)
+- Report progress every 10%
+- Output JSON with `analysis_metadata` containing estimated_range and actual_count
+- Validate: actual_count within [min_estimate, max_estimate] OR document variance
+
+---
+
+### Step 3: Learn the Overall Framework
+**File**: `CLAUDE-ANALYSIS-FRAMEWORK.md`
+**Time**: 10 minutes
+**Purpose**: Understand the 6-phase workflow
+
+**Key Sections**:
+1. **Phase 0**: Agent Instruction Briefing (COMPLETENESS RULES)
+2. **Phase 1**: Discovery (manifest generation)
+3. **Phase 2**: Pattern Scanning (grep hotspots)
+4. **Phase 3**: Parallel Agent Execution
+5. **Phase 5.5**: Agent Output Validation (NEW!)
+6. **Phase 6**: Report Generation
+
+**What You'll Learn**:
+- How to use semantic segmentation (not arbitrary chunks)
+- How to inject context between agents
+- Token budget allocation (200k total)
+- Language plugin system
+- Deduplication algorithm
+
+---
+
+### Step 4: Study Agent Prompt Templates
+**File**: `AGENT-PROMPTS.md`
+**Time**: 15 minutes
+**Purpose**: Learn HOW to execute each specialized agent
+
+**Read in This Order**:
+
+1. **UNIVERSAL AGENT CONTEXT BLOCK** (lines 7-86)
+   - Output format with metadata/validation
+   - Severity guidelines
+   - Constraints
+
+2. **COMPLETENESS ENFORCEMENT RULES** (lines 80-226)
+   - Three-phase execution mandatory
+   - Anti-summarization examples
+   - Rejection criteria
+
+3. **Agent Templates** (pick based on language):
+   - Security Agent (lines 230-463)
+   - Performance Agent (lines 450-705)
+   - Concurrency Agent (lines 724-1020)
+   - JPA/Hibernate Agent (lines 1024-1312) - Java only
+   - Resilience Agent (lines 1317-1600)
+
+**For Each Agent, Study**:
+- Mission statement
+- Analysis checklist
+- Language-specific checks
+- Output examples
+
+---
+
+### Step 5.4 (NEW v3.0): Framework Rules Hierarchy
+**File**: `FRAMEWORK-RULES-HIERARCHY.md`
+**Time**: 5 minutes
+**Purpose**: Understand rule priority when conflicts arise
+**READ BEFORE executing agents to resolve contradictions**
+
+**Why Critical**: Framework v2.4 had conflicting rules. v3.0 defines priority hierarchy.
+
+**3-Level Hierarchy**:
+1. **PRIORITY 1: COMPLETENESS** (find all issues)
+2. **PRIORITY 2: CONTEXT MANAGEMENT** (compression technique)
+3. **PRIORITY 3: OUTPUT STRATEGY** (presentation format)
+
+**Conflict Resolution Example**:
+- Q: "I found 80 MEDIUM findings. Do I document all or sample?"
+- A: Priority 1 says find all (✅), Priority 2 says compress during analysis (✅), Priority 3 says present top 5 detailed + table (✅)
+- Result: Find all 80, write all 80 to disk, present 5 detailed + 75 in Quick Ref Table
+
+**Key Insight**: Completeness is about FINDING all issues, not PRESENTING all in full detail.
+
+---
+
+### Step 5.5 (CRITICAL - v3.0): Universal Context Management
+**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md`
+**Time**: 8 minutes
+**Purpose**: Master smart compression for large codebases
+**READ BEFORE analyzing codebases >50K LOC**
+
+**Why Critical**: Context window is limited (200K tokens). Large projects need intelligent compression.
+
+**Key Principles (v3.0)**:
+1. **Monitor context actively** (check every 10 files)
+2. **Equal domain priority** (25% Security, 25% Performance, 25% Concurrency, 25% Architecture)
+3. **Progressive compression** (during analysis only, expand for output)
+4. **Dynamic write intervals** (50/25/10/1 based on context usage 70%/85%/95%)
+5. **Strategic sampling** (only for >500K LOC codebases, minimum 40%)
+
+**Context Thresholds**:
+```
+0-60%: Full analysis
+60-70%: Start batching similar findings
+70-80%: CRITICAL + HIGH only
+80-90%: CRITICAL only with pattern codes
+>90%: Emergency output
+```
+
+**Adaptive Strategies (v3.0)**:
+- **<10K LOC**: Single pass, full details
+- **10-50K LOC**: Layer-based chunks
+- **50-100K LOC**: Progressive Writing, full analysis (100%)
+- **100-500K LOC**: Progressive Writing, full analysis (100%)
+- **>500K LOC**: Strategic sampling (40% minimum coverage)
+
+**Memory Management**:
+```
+ANALYZE → EXTRACT → COMPRESS → CLEAR
+
+Keep: CRITICAL findings with full context
+Clear: File contents, duplicate patterns, boilerplate
+```
+
+**Output Reconstruction**:
+- During analysis: Store compressed (save context)
+- Final output: Expand to full detail (user sees complete findings)
+
+**Read Full Document**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` for:
+- Complete threshold guidelines
+- Compression format examples
+- Batching algorithms
+- Sampling strategies
+- Pattern libraries
+
+---
+
+### Step 5.6 (⚠️ MANDATORY for >100K LOC - v3.0): Progressive Writing Strategy
+**File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Section: Progressive Writing v3.0)
+**Time**: 5 minutes
+**Purpose**: Solve the 32K output token limit for large-scale analysis
+**⚠️ READ BEFORE analyzing codebases with >100K LOC or 100+ expected findings**
+
+**Why Critical**: Claude has a 32,000 token OUTPUT limit (~40KB). Large analyses generate 800+ findings = 50KB+ output → OVERFLOW ERROR.
+
+**The Problem**:
+```
+Agent finds 250 issues → tries to return all in JSON → exceeds 32K token limit → ERROR
+```
+
+**The Solution - Write-Clear-Continue Pattern (v3.0 with Dynamic Intervals)**:
+```bash
+findings_count=0
+
+# v3.0: Dynamic write interval based on context usage
+context_usage=$(get_context_usage_percentage)
+
+if [ "$context_usage" -lt 70 ]; then
+    BATCH_SIZE=50
+elif [ "$context_usage" -lt 85 ]; then
+    BATCH_SIZE=25
+elif [ "$context_usage" -lt 95 ]; then
+    BATCH_SIZE=10
+else
+    BATCH_SIZE=1  # Write immediately if >95%
+fi
+
+# CLEAR from context when threshold reached
+if [ $((findings_count % BATCH_SIZE)) -eq 0 ]; then
+    echo "[Progress] $findings_count findings written (interval: $BATCH_SIZE)"
+    # Context freed - can continue with constant memory
+fi
+```
+
+**Agent Architecture (v3.0)**:
+- Each agent writes to **separate category file** with **Quick Reference Table**:
+  - Security Agent → `security_findings.md` (with Quick Reference Table at top)
+  - Performance Agent → `performance_findings.md` (with Quick Reference Table at top)
+  - Concurrency Agent → `concurrency_findings.md` (with Quick Reference Table at top)
+  - Architecture Agent → `architecture_findings.md` (with Quick Reference Table at top)
+
+**Key Benefits (v3.0)**:
+- ✅ **Constant Memory**: Write → Clear → Context stays at ~50KB regardless of findings
+- ✅ **No Output Overflow**: Return 2KB summary instead of 40KB+ findings
+- ✅ **Scales to 500K+ LOC**: Write 10,000 findings without hitting limits
+- ✅ **100% Documented**: ALL findings preserved (detailed or in Quick Reference Table)
+- ✅ **Quick Navigation**: Quick Reference Tables for instant location lookup
+- ✅ **Count-Based Sampling**: MEDIUM <20=ALL, LOW <15=ALL (adaptive to finding count)
+- ✅ **Dynamic Intervals**: 50/25/10/1 based on context usage (70%/85%/95% thresholds)
+- ✅ **Pre-Analysis Estimation**: Confidence intervals [min, max] instead of exact counts
+- ✅ **67% Context Savings**: Proven on 138K LOC project (464 findings)
+
+**v3.0 Unified Output Strategy (Count-Based)**:
+- **ALL CRITICAL**: Detailed format (5 lines each) - never sampled
+- **ALL HIGH**: Detailed format (5 lines each) - never sampled
+- **MEDIUM samples**: Count-based rules
+  - <20 total: ALL detailed
+  - 20-50 total: Top 10 detailed + Quick Reference Table
+  - >50 total: Top 5 detailed + Quick Reference Table
+- **LOW samples**: Count-based rules
+  - <15 total: ALL detailed
+  - 15-40 total: Top 8 detailed + Quick Reference Table
+  - >40 total: Top 3 detailed + Quick Reference Table
+- **Quick Reference Table**: 1 line each (ID, severity, category, file:line, brief description)
+
+**When to Use**:
+- Codebase 100-500K LOC (full analysis with Progressive Writing)
+- Codebase >500K LOC (strategic sampling minimum 40%)
+- Expected findings >100 issues
+- Multiple parallel agents
+- Deep comprehensive analysis
+
+**Read Full Section**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` lines 425-660 for:
+- Complete implementation with bash examples
+- Incremental writing patterns
+- Sampling algorithms
+- Context monitoring during writes
 
 ---
 
@@ -91,6 +376,8 @@ chmod +x quick-scan.sh
 - Top security vulnerabilities
 - Major performance issues
 - Actionable hotspots to investigate
+
+For more scripts, see [SCRIPTS.md](SCRIPTS.md)
 
 ---
 
@@ -194,7 +481,7 @@ return {
 
 1. **No Summarization**: Never write "Found 8 SQL injections" without listing all 8
 2. **Complete Listing**: Every finding must have file:line reference
-3. **Validation Block**: Include `declared_count === actual_count` check
+3. **Validation Block**: Include estimated_range and actual_count check
 4. **Progress Reporting**: Report every 10% completion
 
 ### AI Model FAQ
@@ -215,315 +502,13 @@ A: Yes, run Security, Performance, Concurrency, and Architecture agents in paral
 
 ## Part 3: Full Analysis Workflow
 
-### Phase 0: Choose Your Execution Mode
-
-```bash
-# Run assessment first
-echo "Checking codebase size..."
-LOC=$(find . -name "*.java" -o -name "*.py" -o -name "*.js" | xargs wc -l | tail -1 | awk '{print $1}')
-
-if [ "$LOC" -lt 50000 ]; then
-    echo "→ Use STANDARD mode (in-memory analysis)"
-    STRATEGY="standard"
-elif [ "$LOC" -lt 100000 ]; then
-    echo "→ Use HYBRID mode (compressed memory)"
-    STRATEGY="hybrid"
-else
-    echo "→ Use PROGRESSIVE mode (write-clear-continue)"
-    STRATEGY="progressive"
-    # Initialize output files
-    for category in security performance concurrency architecture; do
-        echo "# $category Findings" > "${category}_findings.md"
-        echo "Generated: $(date)" >> "${category}_findings.md"
-        echo "---" >> "${category}_findings.md"
-    done
-fi
-```
-
-### Phase 1: Discovery (5 minutes)
-
-```bash
-#!/bin/bash
-# discovery.sh - Complete project discovery
-
-OUTPUT="discovery-manifest.json"
-
-cat > $OUTPUT <<EOF
-{
-  "project": "$(basename $(pwd))",
-  "analyzed_date": "$(date -Iseconds)",
-  "languages": [],
-  "frameworks": [],
-  "statistics": {},
-  "structure": {}
-}
-EOF
-
-# Detect languages with file counts
-echo "Detecting languages..."
-for ext in java py js ts go rb php; do
-    count=$(find . -name "*.$ext" 2>/dev/null | wc -l)
-    if [ $count -gt 0 ]; then
-        echo "  Found $count .$ext files"
-        # Update JSON (simplified - use jq in practice)
-    fi
-done
-
-# Detect frameworks
-echo "Detecting frameworks..."
-if [ -f pom.xml ]; then
-    grep -q "spring-boot" pom.xml && echo "  ✓ Spring Boot detected"
-    grep -q "hibernate" pom.xml && echo "  ✓ Hibernate detected"
-fi
-
-if [ -f requirements.txt ]; then
-    grep -q "django" requirements.txt && echo "  ✓ Django detected"
-    grep -q "flask" requirements.txt && echo "  ✓ Flask detected"
-fi
-
-if [ -f package.json ]; then
-    grep -q "express" package.json && echo "  ✓ Express detected"
-    grep -q "react" package.json && echo "  ✓ React detected"
-fi
-
-echo "Discovery complete. Manifest saved to $OUTPUT"
-```
-
-### Phase 2: Pattern Scanning (10 minutes)
-
-```bash
-#!/bin/bash
-# pattern-scan.sh - Find hotspots quickly
-
-echo "=== Scanning for Security Patterns ==="
-echo ""
-
-# SQL Injection
-echo "[SQL_INJECTION]"
-grep -r "query.*+" --include="*.java" --include="*.py" -n 2>/dev/null | \
-    awk -F: '{print $1":"$2}' | sort -u > hotspots-sql-injection.txt
-echo "Found $(wc -l < hotspots-sql-injection.txt) potential SQL injection points"
-
-# Authentication gaps
-echo ""
-echo "[MISSING_AUTH]"
-grep -r "@GetMapping\|@PostMapping\|@DeleteMapping" --include="*.java" -A 2 2>/dev/null | \
-    grep -v "@PreAuthorize\|@Secured" | \
-    grep -B 2 "public" > hotspots-auth.txt
-echo "Found $(wc -l < hotspots-auth.txt) unprotected endpoints"
-
-# N+1 Queries
-echo ""
-echo "[N_PLUS_ONE]"
-grep -r "@OneToMany\|@ManyToOne" --include="*.java" -A 1 2>/dev/null | \
-    grep -v "@BatchSize\|EAGER" > hotspots-n-plus-one.txt
-echo "Found $(wc -l < hotspots-n-plus-one.txt) potential N+1 query patterns"
-
-# Hardcoded secrets
-echo ""
-echo "[SECRETS]"
-grep -r "password\|secret\|apikey\|token" --include="*.properties" --include="*.yml" \
-    --include="*.env" 2>/dev/null | grep "=" > hotspots-secrets.txt
-echo "Found $(wc -l < hotspots-secrets.txt) potential hardcoded secrets"
-
-echo ""
-echo "=== Pattern Scan Complete ==="
-echo "Hotspot files generated for deep analysis"
-```
-
-### Phase 3: Agent Execution (30-60 minutes)
-
-Based on your strategy, execute agents:
-
-#### For Standard/Hybrid Strategy
-```bash
-# Run all agents in parallel (if possible)
-echo "Launching analysis agents..."
-
-# Security Agent
-claude-code run-agent \
-    --prompt security-agent-prompt.md \
-    --files hotspots-sql-injection.txt,hotspots-auth.txt \
-    --output findings-security.json &
-
-# Performance Agent
-claude-code run-agent \
-    --prompt performance-agent-prompt.md \
-    --files hotspots-n-plus-one.txt \
-    --output findings-performance.json &
-
-# Wait for completion
-wait
-echo "All agents complete"
-```
-
-#### For Progressive Writing Strategy
-```bash
-# Agents write to files incrementally
-for agent in security performance concurrency architecture; do
-    echo "Running $agent agent with progressive writing..."
-    claude-code run-agent \
-        --prompt ${agent}-agent-prompt.md \
-        --progressive-write ${agent}_findings.md \
-        --return-summary-only
-done
-```
-
-### Phase 4: Assembly and Report Generation
-
-```bash
-#!/bin/bash
-# generate-report.sh - Create final report
-
-if [ "$STRATEGY" == "progressive" ]; then
-    # Combine progressive output files
-    cat > CODE_REVIEW_REPORT.md <<EOF
-# Code Review Report
-Generated: $(date)
-
-## Summary
-$(cat *_findings.md | grep -c "^###") total findings across all categories
-
-## Findings by Category
-
-EOF
-
-    for file in *_findings.md; do
-        cat $file >> CODE_REVIEW_REPORT.md
-        echo "" >> CODE_REVIEW_REPORT.md
-    done
-else
-    # Merge JSON findings
-    jq -s 'add' findings-*.json > all-findings.json
-
-    # Generate markdown report
-    python3 generate-report.py all-findings.json > CODE_REVIEW_REPORT.md
-fi
-
-echo "Report generated: CODE_REVIEW_REPORT.md"
-echo "Total findings: $(grep -c "^###" CODE_REVIEW_REPORT.md)"
-```
+For complete workflow scripts and examples, see:
+- [SCRIPTS.md](SCRIPTS.md) - All executable scripts
+- [EXAMPLES.md](EXAMPLES.md) - Real-world analysis examples
 
 ---
 
-## Part 4: Real-World Examples
-
-### Example 1: Spring Boot Microservice (85K LOC)
-
-**Discovery Output**:
-```
-=== Repository Statistics ===
-Path: /home/user/payment-service
-Language: Java (Spring Boot 3.2.0, Hibernate 6.2)
-Total files: 523
-Total LOC: 85,432
-Modules: 12
-→ Strategy: HYBRID (compressed memory)
-```
-
-**Security Scan Results**:
-```
-[SEC-CRIT-001] SQL Injection via String Concatenation
-File: UserController.java:45
-Pattern: String query = "SELECT * FROM users WHERE email = '" + email + "'";
-Impact: Complete database compromise possible
-Fix: Use PreparedStatement or @Query with parameters
-
-[SEC-CRIT-002] Missing Authentication on Admin Endpoint
-File: AdminController.java:89
-Pattern: @DeleteMapping("/admin/users/{id}") // No @PreAuthorize!
-Impact: Any user can delete other users
-Fix: Add @PreAuthorize("hasRole('ADMIN')")
-
-... 43 more security findings
-```
-
-**Performance Scan Results**:
-```
-[PERF-CRIT-001] Missing Hibernate Batch Configuration
-File: application.yml
-Impact: saveAll() operations execute as N individual INSERTs
-Measurement: 50 entities take 2.5s instead of 0.1s
-Fix: Add spring.jpa.properties.hibernate.jdbc.batch_size: 25
-
-[PERF-CRIT-002] N+1 Query on User.orders Relationship
-File: User.java:34
-Pattern: @OneToMany(mappedBy = "user") // No @BatchSize!
-Impact: Loading 100 users triggers 101 queries
-Fix: Add @BatchSize(size = 10) or use JOIN FETCH
-```
-
-**Quick Wins Identified**:
-```
-1. Add batch configuration (30 min) → 25x faster bulk operations
-2. Add @BatchSize to 15 relationships (2 hours) → 10x fewer queries
-3. Add authentication to 5 endpoints (1 hour) → Critical security fix
-Total effort: 3.5 hours
-Expected improvement: 5-10x performance, 5 critical vulnerabilities fixed
-```
-
-### Example 2: Django E-commerce (45K LOC)
-
-**Discovery Output**:
-```
-=== Repository Statistics ===
-Path: /home/user/django-shop
-Language: Python (Django 4.2, PostgreSQL)
-Total files: 234
-Total LOC: 45,123
-Apps: 8 (users, products, orders, payments, etc.)
-→ Strategy: STANDARD (in-memory)
-```
-
-**Critical Findings**:
-```python
-# [SEC-CRIT-001] SQL Injection in Raw Query
-# File: views.py:234
-cursor.execute(f"SELECT * FROM products WHERE category = '{category}'")
-# Fix: Use parameterized query
-cursor.execute("SELECT * FROM products WHERE category = %s", [category])
-
-# [PERF-CRIT-001] N+1 Query in Order List View
-# File: views.py:456
-orders = Order.objects.all()
-for order in orders:
-    print(order.user.profile.name)  # N+1 query!
-# Fix: Use select_related
-orders = Order.objects.select_related('user__profile').all()
-```
-
-### Example 3: Node.js API (32K LOC)
-
-**Discovery Output**:
-```
-=== Repository Statistics ===
-Path: /home/user/api-gateway
-Language: JavaScript (Express 4.18, MongoDB)
-Total files: 156
-Total LOC: 32,456
-→ Strategy: STANDARD (in-memory)
-```
-
-**Critical Findings**:
-```javascript
-// [SEC-CRIT-001] XSS Vulnerability
-// File: routes/user.js:45
-app.get('/welcome', (req, res) => {
-    res.send(`<h1>Welcome ${req.query.name}</h1>`); // XSS!
-});
-// Fix: Escape user input
-res.send(`<h1>Welcome ${escape(req.query.name)}</h1>`);
-
-// [PERF-CRIT-001] Synchronous File Operation Blocking Event Loop
-// File: services/report.js:23
-const data = fs.readFileSync('./large-file.json'); // BLOCKS!
-// Fix: Use async version
-const data = await fs.promises.readFile('./large-file.json');
-```
-
----
-
-## Part 5: Troubleshooting
+## Part 4: Troubleshooting
 
 ### Common Issues and Solutions
 
@@ -546,37 +531,6 @@ done
 # Use pattern scanning to identify hotspots first
 grep -r "critical_pattern" --include="*.java" -l > hotspots.txt
 # Analyze only hotspot files
-claude-code analyze --files hotspots.txt
-```
-
-#### Issue: "Can't determine framework"
-**Diagnosis**: Non-standard project structure
-**Solution**:
-```bash
-# Create manual manifest
-cat > manifest.json <<EOF
-{
-  "language": "Java",
-  "framework": "Spring Boot",
-  "database": "PostgreSQL"
-}
-EOF
-# Pass to agents
-claude-code analyze --context manifest.json
-```
-
-#### Issue: "Duplicate findings in report"
-**Diagnosis**: Multiple agents finding same issue
-**Solution**:
-```python
-# Deduplicate by hash
-seen = set()
-unique_findings = []
-for finding in all_findings:
-    hash_key = f"{finding['file']}:{finding['line']}:{finding['type']}"
-    if hash_key not in seen:
-        seen.add(hash_key)
-        unique_findings.append(finding)
 ```
 
 #### Issue: "Memory/Context overflow during analysis"
@@ -600,25 +554,16 @@ with open('output.md', 'a') as f:
 
 ---
 
-## Next Steps
-
-After reading this guide:
-
-1. **For AI Models**: Proceed to your mandatory reading list based on strategy
-2. **For Humans**: Run the 5-minute scan, then decide if you need deeper analysis
-3. **For Examples**: See real-world results above or check LANGUAGE-PLUGINS.md
-4. **For Scripts**: All scripts in this doc are ready to copy and run
-
 ## Quick Reference
 
 | Action | Command/File |
 |--------|-------------|
 | Quick scan | `./quick-scan.sh` |
-| Full discovery | `./discovery.sh` |
-| Find hotspots | `./pattern-scan.sh` |
+| Full discovery | See [SCRIPTS.md](SCRIPTS.md) |
+| Find hotspots | See [SCRIPTS.md](SCRIPTS.md) |
 | Progressive setup | `touch {security,performance,concurrency,architecture}_findings.md` |
-| Generate report | `./generate-report.sh` |
-| Check strategy | `find . -name "*.{java,py,js}" \| xargs wc -l` |
+| Examples | See [EXAMPLES.md](EXAMPLES.md) |
+| All scripts | See [SCRIPTS.md](SCRIPTS.md) |
 
 ## Document Index
 
@@ -630,18 +575,22 @@ After reading this guide:
 | **CLAUDE-ANALYSIS-FRAMEWORK.md** | Core methodology | After strategy chosen |
 | **AGENT-PROMPTS.md** | Agent templates | When running agents |
 | **LANGUAGE-PLUGINS.md** | Language patterns | For specific languages |
+| **FRAMEWORK-RULES-HIERARCHY.md** | Conflict resolution | v3.0 - when rules conflict |
+| **EXAMPLES.md** | Real-world examples | For reference |
+| **SCRIPTS.md** | All executable scripts | For automation |
 
 ---
 
 ## Version & Support
 
 **Version**: 3.0 (Consolidated Edition)
-**Last Updated**: 2024-10-12
-**Framework Version**: 2.4
+**Last Updated**: 2025-10-12
+**Framework Version**: 3.0
 
-For additional examples and detailed language-specific patterns, see:
-- [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) - Pattern catalog
-- [SCRIPTS.md](SCRIPTS.md) - All scripts collection (if created)
+For additional support and patterns, see:
+- [EXAMPLES.md](EXAMPLES.md) - Real-world case studies
+- [SCRIPTS.md](SCRIPTS.md) - All automation scripts
+- [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) - Language-specific patterns
 
 **Remember**: When in doubt, use Progressive Writing Strategy - it always works!
 

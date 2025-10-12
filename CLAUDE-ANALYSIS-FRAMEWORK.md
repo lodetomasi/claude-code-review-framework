@@ -1,9 +1,13 @@
 # CLAUDE CODE ANALYSIS FRAMEWORK
 ## Universal Deep-Dive Code Review System
 
-**Version**: 2.4
+**Version**: 3.0
 **Last Updated**: 2025-10-12
 **Purpose**: Programmatic, scalable code analysis framework that works with any repository size and programming language
+**Breaking Changes from v2.4**:
+- Pre-Analysis Counting → Estimation with confidence intervals
+- v2.4 Output Strategy → v3.0 Unified Strategy (count-based)
+- Removed contradictory "declared_count === actual_count" rule
 
 ---
 
@@ -89,14 +93,17 @@ This framework enables **line-by-line code analysis** of repositories of any siz
 
 ### Phase 0: Agent Instruction Briefing
 
-**CRITICAL**: All agents MUST follow the **COMPLETENESS ENFORCEMENT RULES** defined in `COMPLETENESS-ENFORCEMENT.md`.
+**CRITICAL**: All agents MUST follow the **COMPLETENESS ENFORCEMENT RULES v3.0** defined in `COMPLETENESS-ENFORCEMENT.md`.
 
-**Three-Phase Execution**:
-1. **Pre-Analysis Counting**: Agents must declare expected finding count BEFORE analyzing
+**Three-Phase Execution (v3.0)**:
+1. **Pre-Analysis ESTIMATION**: Agents estimate finding count range [min, max] with confidence level
 2. **Progressive Extraction**: Report progress every 10% with specific finding IDs
-3. **Output Validation**: Ensure `declared_count === actual_count`
+3. **Output Validation**: Ensure `actual_count` within `[min_estimate, max_estimate]` OR document variance
 
 **Key Requirement**: Document EVERY finding individually - NO summarization or grouping statements like "8 SQL injection vulnerabilities found".
+
+**Rule Hierarchy**: When conflicts arise, follow priority order in `FRAMEWORK-RULES-HIERARCHY.md`:
+1. COMPLETENESS (find all) > 2. CONTEXT MANAGEMENT (compression technique) > 3. OUTPUT STRATEGY (presentation format)
 
 **See**: `COMPLETENESS-ENFORCEMENT.md` for full specification and `AGENT-PROMPTS.md` for integrated agent templates.
 
