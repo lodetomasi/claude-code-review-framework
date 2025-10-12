@@ -104,6 +104,83 @@ See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
 
 ---
 
+## 🤖 FOR AI MODELS: START HERE FIRST
+
+**If you are an AI model tasked with performing code review**:
+
+1. ⚠️ **DO NOT read this README sequentially**
+2. ✅ **START FROM [START-HERE.md](START-HERE.md)** - Mandatory reading guide for AI models
+3. START-HERE.md will tell you exactly which documents to read and in what order
+4. START-HERE.md contains critical decision points for choosing your analysis strategy
+
+**Proceeding without reading START-HERE.md first will cause**:
+- ❌ Wrong strategy selection → 32K token overflow errors
+- ❌ Skipped critical completeness enforcement rules → summarized findings
+- ❌ Missing Progressive Writing implementation → analysis failure on large codebases
+
+**🎯 [→ GO TO START-HERE.md NOW](START-HERE.md)** ← Click here to start correctly
+
+---
+
+## 🎯 Choosing Your Analysis Strategy
+
+**Before starting analysis**, determine which execution strategy to use based on codebase size and expected findings:
+
+| Codebase Size | Expected Findings | Strategy | Reason |
+|---------------|-------------------|----------|--------|
+| < 50K LOC | < 100 issues | **Standard Output** | Fits comfortably in 32K token output limit |
+| 50-100K LOC | 100-200 issues | **Progressive Writing** | May exceed token limit - safer to use incremental writing |
+| > 100K LOC | 200+ issues | **Progressive Writing** ⚠️ **MANDATORY** | Will definitely exceed token limit - must use incremental writing |
+
+### Strategy A: Standard Output (Small/Medium Codebases)
+
+**When to use**: Codebase < 100K LOC AND expected findings < 100 issues
+
+**How it works**:
+- Agents analyze code and accumulate findings in memory
+- Return complete JSON with all findings
+- Validate: `declared_count === actual_count`
+- Maximum output: ~30KB (safe within 32K limit)
+
+**Pros**: Simple, all findings in single response
+**Cons**: Fails with 32K overflow if too many findings
+
+### Strategy B: Progressive Writing (Large Codebases) - v2.3
+
+**When to use**: Codebase > 100K LOC OR expected findings > 100 issues OR when unsure
+
+**How it works**:
+1. Each agent writes to **separate category file** during analysis:
+   - Security Agent → `security_findings.md`
+   - Performance Agent → `performance_findings.md`
+   - Concurrency Agent → `concurrency_findings.md`
+   - Architecture Agent → `architecture_findings.md`
+
+2. **Write-Clear-Continue pattern**:
+   - Analyze findings and write to file immediately
+   - Every 50 findings: flush to disk → clear from context
+   - Continue analysis with freed memory
+
+3. Agent returns **summary only** (2KB instead of 40KB+):
+   ```json
+   {
+     "agent": "Security Agent",
+     "findings_found": 250,
+     "findings_documented": 102,
+     "output_file": "security_findings.md",
+     "sampling_applied": true
+   }
+   ```
+
+**Pros**: Never exceeds token limits, scales to 1M+ LOC
+**Cons**: Findings split across multiple files
+
+**⚠️ CRITICAL**: If you have 200+ findings and try Standard Output → 32K TOKEN OVERFLOW ERROR
+
+**✅ When in doubt, use Progressive Writing** (always works, never overflows)
+
+---
+
 ## Workflow
 
 ### Phase 0: Agent Instruction Briefing (2 minutes)
@@ -127,7 +204,8 @@ See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
 - Generate hotspot list
 
 ### Phase 3: Agent Execution (30-60 minutes)
-Run specialized agents in parallel with Chain of Thought reasoning:
+
+Run specialized agents in parallel:
 - **Security Agent**: Authentication, authorization, input validation, cryptography
 - **Performance Agent**: Database queries, algorithms, caching, transactions
 - **Concurrency Agent**: Thread safety, race conditions, deadlocks, resource leaks
@@ -135,10 +213,37 @@ Run specialized agents in parallel with Chain of Thought reasoning:
 - **Resilience Agent**: Timeouts, circuit breakers, retries, bulkheads
 - **Architecture Agent**: Dependency violations, coupling, god classes
 
-Each agent follows:
-1. Pre-Analysis Counting: Declare expected finding count by category
-2. Progressive Extraction: Report progress every 10% with specific finding IDs
-3. Output Validation: Verify declared_count === actual_count
+#### For Large Codebases (>100K LOC) - Progressive Writing Strategy v2.3
+
+Each agent executes with write-clear-continue pattern:
+
+1. **Initialize output file**: `security_findings.md` (category-specific)
+2. **Incremental writing loop**:
+   - Analyze file and identify findings
+   - Write findings to disk immediately (don't accumulate in memory)
+   - Every 50 findings: flush to disk → **clear from context** → continue
+3. **Apply intelligent sampling**:
+   - CRITICAL: Document ALL (no omissions)
+   - HIGH: Document ALL (no omissions)
+   - MEDIUM: Sample top 30% by impact
+   - LOW: Sample top 20% by frequency
+4. **Return summary only** (2KB instead of 40KB+ findings):
+   ```json
+   {
+     "agent": "Security Agent",
+     "findings_found": 250,
+     "findings_documented": 102,
+     "output_file": "security_findings.md"
+   }
+   ```
+
+#### For Standard Codebases (<100K LOC) - Traditional Approach
+
+Each agent follows 3-phase execution:
+
+1. **Pre-Analysis Counting**: Declare expected finding count by category
+2. **Progressive Extraction**: Report progress every 10% with specific finding IDs
+3. **Output Validation**: Return full JSON with all findings, verify declared_count === actual_count
 
 ### Phase 4: Result Assembly (5 minutes)
 - Merge findings from all agents
@@ -618,6 +723,13 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
 3. Review [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) - Overall workflow
 4. Study [AGENT-PROMPTS.md](AGENT-PROMPTS.md) - Agent templates and examples
 5. **Read [UNIVERSAL-CONTEXT-MANAGEMENT.md](UNIVERSAL-CONTEXT-MANAGEMENT.md) for large codebases (>50K LOC)** - Context optimization strategies
+6. ⚠️ **CRITICAL DECISION POINT**:
+   - **IF** codebase > 100K LOC **OR** expecting > 100 findings:
+     - ✅ **YOU MUST** use Progressive Writing Strategy (see Step 5.6 in START-HERE.md)
+     - ✅ **YOU MUST** initialize separate output files per agent (security_findings.md, etc.)
+     - ✅ **YOU MUST** return summary only (NOT full findings in response)
+     - ⛔ **DO NOT** attempt standard output (will cause 32K token overflow ERROR)
+   - **ELSE**: Standard output with full JSON is acceptable
 
 ### For Humans
 1. Read [QUICK-START.md](QUICK-START.md) for hands-on tutorial

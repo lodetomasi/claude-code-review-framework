@@ -13,6 +13,43 @@ This guide tells you **HOW TO READ** the framework documentation in the correct 
 
 ---
 
+## ⚠️ BEFORE YOU START - DETERMINE YOUR STRATEGY
+
+**MANDATORY ASSESSMENT** before reading further. Answer these questions honestly:
+
+### 1. Codebase Size Assessment
+Check ONE option that matches your target codebase:
+
+- [ ] **< 50K LOC** → Read Steps 1-4, use Standard Output
+- [ ] **50-100K LOC** → Read Steps 1-5.5, consider Progressive Writing
+- [ ] **> 100K LOC** → Read Steps 1-5.6 **MANDATORY**, use Progressive Writing
+
+### 2. Expected Findings Assessment
+Estimate from pattern scan results:
+
+- [ ] **< 50 issues** → Standard output acceptable
+- [ ] **50-100 issues** → Progressive Writing recommended
+- [ ] **> 100 issues** → Progressive Writing **MANDATORY**
+
+### 🚨 CRITICAL DECISION RULES
+
+**IF you checked ANY rightmost option above**:
+- ⛔ **DO NOT** skip Step 5.6 (Progressive Writing Strategy)
+- ⛔ **DO NOT** attempt standard output (will cause 32K token overflow ERROR)
+- ✅ **YOU MUST** use write-clear-continue pattern
+- ✅ **YOU MUST** write to separate files per agent
+- ✅ **YOU MUST** return summary only (not full findings)
+
+**IF unsure**: Use Progressive Writing (always works, never fails)
+
+**Consequences of wrong choice**:
+- 200+ findings with standard output → **32,000 TOKEN OVERFLOW ERROR** 💥
+- 50 findings with progressive writing → Works but unnecessary overhead ✅
+
+**Golden rule**: **When in doubt, use Progressive Writing**
+
+---
+
 ## 📖 READING ORDER (MANDATORY)
 
 ### Step 1: Read This File First
@@ -160,11 +197,11 @@ Clear: File contents, duplicate patterns, boilerplate
 
 ---
 
-### Step 5.6 (CRITICAL - NEW v2.3): Progressive Writing Strategy
+### Step 5.6 (⚠️ MANDATORY for >100K LOC - NEW v2.3): Progressive Writing Strategy
 **File**: `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Section: Progressive Writing v2.3)
 **Time**: 5 minutes
 **Purpose**: Solve the 32K output token limit for large-scale analysis
-**READ BEFORE analyzing codebases with 100+ expected findings**
+**⚠️ READ BEFORE analyzing codebases with >100K LOC or 100+ expected findings**
 
 **Why Critical**: Claude has a 32,000 token OUTPUT limit (~40KB). Large analyses generate 800+ findings = 50KB+ output → OVERFLOW ERROR.
 
@@ -245,6 +282,110 @@ done
 - Incremental writing patterns
 - Sampling algorithms
 - Context monitoring during writes
+
+---
+
+### Step 6: Choose Your Execution Strategy (MANDATORY DECISION POINT)
+
+**Based on your assessment from "BEFORE YOU START" section**, select the appropriate execution strategy:
+
+#### Strategy A: Standard Output (Small/Medium Codebases)
+
+**✅ Use when**:
+- Codebase < 100K LOC **AND**
+- Expected findings < 100 issues
+
+**How it works**:
+- Agents analyze code and accumulate findings in memory
+- Return complete JSON response with all findings
+- Validate: `declared_count === actual_count`
+- Maximum output: ~30KB (safe within 32K token limit)
+
+**Agent response format**:
+```json
+{
+  "analysis_metadata": { ... },
+  "findings": [ ... array of all findings ... ],
+  "validation": { "counts_match": true }
+}
+```
+
+**Pros**: Simple, all findings in single response
+**Cons**: Fails with 32K overflow if too many findings
+
+---
+
+#### Strategy B: Progressive Writing (Large Codebases) - v2.3
+
+**✅ Use when**:
+- Codebase > 100K LOC **OR**
+- Expected findings > 100 issues **OR**
+- When unsure (safest choice)
+
+**How it works**:
+1. Each agent writes to **separate category file** during analysis:
+   - Security Agent → `security_findings.md`
+   - Performance Agent → `performance_findings.md`
+   - Concurrency Agent → `concurrency_findings.md`
+   - Architecture Agent → `architecture_findings.md`
+
+2. **Write-Clear-Continue pattern**:
+   ```bash
+   for each file in codebase:
+       analyze and identify findings
+       write findings to disk immediately
+       if findings_count % 50 == 0:
+           flush to disk
+           CLEAR findings from context  # Critical!
+           continue analysis
+   ```
+
+3. Apply intelligent sampling:
+   - CRITICAL: Document ALL (no omissions)
+   - HIGH: Document ALL (no omissions)
+   - MEDIUM: Sample top 30% by impact
+   - LOW: Sample top 20% by frequency
+
+4. Agent returns **summary only** (2KB instead of 40KB+):
+   ```json
+   {
+     "agent": "Security Agent",
+     "status": "completed",
+     "output_file": "security_findings.md",
+     "findings_found": 250,
+     "findings_documented": 102,
+     "sampling_applied": true
+   }
+   ```
+
+**Pros**: Never exceeds token limits, scales to 1M+ LOC
+**Cons**: Findings split across multiple files (minor inconvenience)
+
+---
+
+### ⚠️ Strategy Selection Consequences
+
+| Your Choice | What Happens |
+|-------------|--------------|
+| Standard output with 200+ findings | **32,000 TOKEN OVERFLOW ERROR** 💥 Analysis fails completely |
+| Standard output with 80 findings | ✅ Works perfectly, all findings in response |
+| Progressive Writing with 200+ findings | ✅ Works perfectly, findings in files |
+| Progressive Writing with 80 findings | ✅ Works (unnecessary overhead but safe) |
+
+### 🎯 Decision Algorithm
+
+```
+IF (codebase_size > 100K OR expected_findings > 100):
+    strategy = PROGRESSIVE_WRITING  # MANDATORY
+    initialize_output_files()
+    use_write_clear_continue_pattern()
+ELSE:
+    strategy = STANDARD_OUTPUT
+    accumulate_findings_in_memory()
+    return_full_json()
+```
+
+**Golden Rule**: **When in doubt, use Progressive Writing** (always works, never fails)
 
 ---
 
@@ -533,11 +674,23 @@ Focus: XSS, event loop blocking, async/await, prototype pollution
 **A**: NO. Validation block is MANDATORY in every output.
 
 ### Q: What if analysis would exceed token budget?
-**A**:
+**A**: **USE PROGRESSIVE WRITING STRATEGY** (Step 5.6) - This is THE solution for token limits:
+
+**Primary solution** (v2.3):
+1. **Progressive Writing Strategy**:
+   - Write findings to disk DURING analysis (not at end)
+   - Flush every 50 findings → clear from context
+   - Return summary only (2KB instead of 40KB+)
+   - Never exceeds 32K output token limit
+   - See Step 5.6 for complete implementation
+
+**Legacy alternatives** (only if Progressive Writing unavailable):
 1. Split layer into smaller batches
 2. Run sequentially
 3. Maintain count across batches
 4. Merge at end
+
+**Note**: The legacy approach is a workaround. Progressive Writing is the designed solution for large-scale analysis.
 
 ### Q: How detailed should code evidence be?
 **A**: Max 10 lines of actual code from the file. Include enough context to understand the issue.
@@ -548,13 +701,36 @@ Focus: XSS, event loop blocking, async/await, prototype pollution
 
 Your output is COMPLETE when:
 
-✅ `declared_count === actual_count`
+### For All Analyses (Standard + Progressive Writing):
 ✅ All findings have file:line references
 ✅ All findings have code evidence
 ✅ No placeholder text ("...", "etc.", "and others")
 ✅ No summarization statements
 ✅ ID sequence is continuous (no gaps)
+
+### For Standard Output (<100 findings):
+✅ `declared_count === actual_count`
 ✅ Validation block present with all `true` values
+✅ Complete JSON with all findings in response
+
+### For Progressive Writing (>100 findings or >100K LOC):
+✅ **Separate output files created** per agent category:
+   - `security_findings.md` exists with findings
+   - `performance_findings.md` exists with findings
+   - `concurrency_findings.md` exists with findings
+   - `architecture_findings.md` exists with findings
+✅ **Write-clear-continue pattern used** (flushed every 50 findings)
+✅ **Returned summary only** (NOT full findings in response)
+✅ **Summary includes**:
+   - `findings_found`: total count discovered
+   - `findings_documented`: actual count written to file
+   - `output_file`: filename where findings are stored
+   - `sampling_applied`: true/false
+✅ **Intelligent sampling applied** correctly:
+   - CRITICAL: ALL documented (no omissions)
+   - HIGH: ALL documented (no omissions)
+   - MEDIUM: Top 30% by impact documented
+   - LOW: Top 20% by frequency documented
 
 ---
 

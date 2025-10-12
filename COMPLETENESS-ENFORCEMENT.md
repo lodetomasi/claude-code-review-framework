@@ -7,6 +7,21 @@
 
 ---
 
+## 📚 READING CONTEXT
+
+**This document is Step 2** in the mandatory reading order defined in [START-HERE.md](START-HERE.md).
+
+**If you arrived here directly**: Please read [START-HERE.md](START-HERE.md) first for proper context and reading sequence.
+
+**Why this matters**:
+- START-HERE.md provides the "BEFORE YOU START" assessment (codebase size, expected findings)
+- You need to know if you're doing Standard Output or Progressive Writing
+- This document (COMPLETENESS-ENFORCEMENT) applies to BOTH strategies but with different implementations
+
+**After reading this document**, continue to Step 3: [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md)
+
+---
+
 ## PROBLEM STATEMENT
 
 **Observed Behavior**: AI agents tend to summarize findings when they find many similar issues:

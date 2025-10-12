@@ -6,6 +6,31 @@ Version: 2.3
 Date: 2025-10-12
 Framework: claude-code-review-framework
 
+---
+
+## ⚠️ PREREQUISITE: READ START-HERE.md FIRST
+
+**This document contains agent prompt templates** (Step 4 in the framework reading order).
+
+**If you haven't read [START-HERE.md](START-HERE.md)**: You MUST read it before using these agent templates.
+
+**Why START-HERE.md is mandatory**:
+- ✅ Explains when to use which agent (Security, Performance, Concurrency, etc.)
+- ✅ Teaches you how to choose between Standard Output and Progressive Writing
+- ✅ Provides critical completeness enforcement rules (no summarization, count-first, validation)
+- ✅ Shows you the assessment checklist (codebase size + expected findings)
+
+**Without START-HERE.md, you will**:
+- ❌ Not know when to use Progressive Writing → 32K token overflow
+- ❌ Not apply completeness enforcement → summarized findings (invalid)
+- ❌ Not understand the 3-phase execution pattern
+
+**This document (AGENT-PROMPTS.md) is Step 4** in the reading order.
+
+🎯 **[→ GO TO START-HERE.md NOW](START-HERE.md)** if you haven't read it yet, then return here.
+
+---
+
 ## Improvements in v2.2 (NEW)
 
 - 🆕 **Context-Optimized Output**: Focus on finding MORE issues, not verbose solutions

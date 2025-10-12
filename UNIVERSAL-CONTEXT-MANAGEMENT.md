@@ -7,6 +7,22 @@
 
 ---
 
+## 📚 READING CONTEXT
+
+**This document is Step 5.5 and 5.6** in the reading order defined in [START-HERE.md](START-HERE.md).
+
+**If you arrived here directly**: Read [START-HERE.md](START-HERE.md) first to understand:
+- When to use Universal Context Management (Step 5.5): codebases > 50K LOC
+- When to use Progressive Writing Strategy (Step 5.6): codebases > 100K LOC or > 100 expected findings
+
+**This document contains TWO critical strategies**:
+1. **Universal Context Management** (Step 5.5): Smart compression for 50-100K LOC
+2. **Progressive Writing Strategy** (Step 5.6): Incremental disk writes for >100K LOC
+
+🎯 **[→ GO TO START-HERE.md](START-HERE.md)** if you need to understand when to apply these strategies.
+
+---
+
 ## 🎯 FUNDAMENTAL PRINCIPLES
 1. **Analyze ALL aspects with EQUAL priority**: Security, Performance, Concurrency, Architecture
 2. **Manage context window ACTIVELY**: Monitor usage, compress intelligently, never overflow

@@ -7,6 +7,24 @@
 
 ---
 
+## ⚠️ FOR AI MODELS - READ THIS FIRST
+
+**If you haven't read [START-HERE.md](START-HERE.md) yet**: Stop and read it first.
+
+**Why**: START-HERE.md provides:
+- ✅ Mandatory reading order for all framework documents (this is Step 3)
+- ✅ Decision points for choosing analysis strategy (Standard vs Progressive Writing)
+- ✅ Critical rules that prevent common mistakes (completeness enforcement, anti-summarization)
+- ✅ Assessment checklist to determine if you need Progressive Writing
+
+**This document (CLAUDE-ANALYSIS-FRAMEWORK.md) is Step 3** in the reading order defined in START-HERE.md.
+
+**Proceeding without START-HERE.md will cause**: Wrong strategy selection, incomplete analysis, 32K token overflow.
+
+🎯 **[→ GO TO START-HERE.md NOW](START-HERE.md)** if you haven't read it yet.
+
+---
+
 ## OVERVIEW
 
 This framework enables **line-by-line code analysis** of repositories of any size by using:
