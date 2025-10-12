@@ -487,7 +487,7 @@ To integrate completeness enforcement into existing framework:
 - [ ] Run validation before accepting agent output
 - [ ] Log validation failures for debugging
 
-### 4. Update QUICK-START.md
+### 4. Update Documentation
 - [ ] Add example showing progress tracking
 - [ ] Show validation in action
 - [ ] Demonstrate handling of incomplete outputs

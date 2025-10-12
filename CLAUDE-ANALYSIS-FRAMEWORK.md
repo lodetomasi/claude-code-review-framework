@@ -1395,4 +1395,4 @@ This framework provides:
 5. **Accuracy**: Factual findings with evidence
 6. **Actionability**: Prioritized recommendations with quick wins
 
-**Next Steps**: See `QUICK-START.md` for hands-on examples
+**Next Steps**: See `START-HERE.md` for getting started and `EXAMPLES.md` for hands-on examples

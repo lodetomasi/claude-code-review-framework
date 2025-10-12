@@ -57,7 +57,7 @@ grep -r "for.*for.*for" --include="*.java" --include="*.py" -n | head -10
 
 ### 30-Minute Full Analysis
 
-See [QUICK-START.md](QUICK-START.md) for complete walkthrough with examples.
+See [START-HERE.md](START-HERE.md) for the complete framework guide and workflow.
 
 ---
 
@@ -290,21 +290,23 @@ Each agent follows 3-phase execution:
 
 ## Documentation
 
-### For AI Models (Read in This Order)
+### Core Documentation
 
-| Document | Description |
-|----------|-------------|
-| **[START-HERE.md](START-HERE.md)** | **🎯 START HERE** - Reading guide for AI models with mandatory reading order |
-| [COMPLETENESS-ENFORCEMENT.md](COMPLETENESS-ENFORCEMENT.md) | 3-phase validation system to prevent summarization and ensure 100% finding documentation |
-| [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) | Complete framework methodology with Phase 0-6 workflow and validation |
-| [AGENT-PROMPTS.md](AGENT-PROMPTS.md) | Agent templates with Chain of Thought reasoning and completeness enforcement |
+| Document | Description | For |
+|----------|-------------|-----|
+| **[START-HERE.md](START-HERE.md)** | **🎯 MAIN ENTRY POINT** - Consolidated guide for both AI models and humans | Everyone |
+| [COMPLETENESS-ENFORCEMENT.md](COMPLETENESS-ENFORCEMENT.md) | 3-phase validation system to prevent summarization | AI Models |
+| [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) | Complete framework methodology with Phase 0-6 workflow | AI Models |
+| [AGENT-PROMPTS.md](AGENT-PROMPTS.md) | Agent templates with Chain of Thought reasoning | AI Models |
+| [UNIVERSAL-CONTEXT-MANAGEMENT.md](UNIVERSAL-CONTEXT-MANAGEMENT.md) | Memory optimization for large codebases | AI Models |
 
-### For Humans
+### Supporting Documentation
 
-| Document | Description |
-|----------|-------------|
-| [QUICK-START.md](QUICK-START.md) | Step-by-step guide with real examples for running analyses |
-| [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) | Language-specific patterns for Java, Python, JavaScript |
+| Document | Description | For |
+|----------|-------------|-----|
+| [EXAMPLES.md](EXAMPLES.md) | Real-world code review examples with detailed findings | Humans |
+| [SCRIPTS.md](SCRIPTS.md) | Ready-to-use bash scripts for all analysis tasks | Humans |
+| [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) | Language-specific patterns for Java, Python, JavaScript | Both |
 
 ---
 
@@ -684,7 +686,7 @@ This framework documentation is provided as-is for educational and professional 
 - **Documentation**: See files in this repository
 - **Issues**: Create GitHub issue
 - **Discussions**: GitHub Discussions
-- **Examples**: See [QUICK-START.md](QUICK-START.md)
+- **Examples**: See [EXAMPLES.md](EXAMPLES.md)
 
 ---
 
@@ -763,7 +765,7 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
    - **ELSE**: Standard output with full JSON is acceptable
 
 ### For Humans
-1. Read [QUICK-START.md](QUICK-START.md) for hands-on tutorial
+1. Read [START-HERE.md](START-HERE.md) for getting started
 2. Review [CLAUDE-ANALYSIS-FRAMEWORK.md](CLAUDE-ANALYSIS-FRAMEWORK.md) for methodology
 3. Check [AGENT-PROMPTS.md](AGENT-PROMPTS.md) for prompt templates
 4. Explore [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) for language-specific patterns
