@@ -380,6 +380,409 @@ See [LANGUAGE-PLUGINS.md](LANGUAGE-PLUGINS.md) for adding new languages.
 
 ---
 
+## HOW TO READ ANALYSIS RESULTS (v2.4)
+
+After analysis completes, you'll have multiple output files. This section explains how to navigate them effectively and take action on findings.
+
+### Output Structure
+
+**Directory**: `analysis-v2.4/` (or similar)
+
+```
+analysis-v2.4/
+├── manifest.json                    # Project metadata
+├── hotspots.json                    # Pattern scan results
+├── CODE_REVIEW_REPORT_v2.4.md      # 🎯 MAIN REPORT (start here)
+├── security_findings.md             # Security domain (with Quick Ref Table)
+├── performance_findings.md          # Performance domain (with Quick Ref Table)
+├── concurrency_findings.md          # Concurrency domain (with Quick Ref Table)
+├── jpa_findings.md                  # JPA/Hibernate domain (with Quick Ref Table)
+├── resilience_findings.md           # Resilience domain (with Quick Ref Table)
+├── architecture_findings.md         # Architecture domain (with Quick Ref Table)
+└── findings-all.json                # All findings merged (deduplicated)
+```
+
+---
+
+### 1. Start with the Main Report
+
+**File**: `CODE_REVIEW_REPORT_v2.4.md`
+
+**Purpose**: Executive summary + all CRITICAL/HIGH issues detailed
+
+**Key Sections**:
+- **Section 1**: Executive Summary (read first - 2 minutes)
+- **Section 2**: Project Structure (understand context)
+- **Section 3**: CRITICAL & HIGH Issues (100% detailed - act on these first)
+- **Section 4**: MEDIUM Issues (5 samples + Quick Reference to rest)
+- **Section 5**: LOW Issues (5 samples + Quick Reference to rest)
+- **Section 6**: Findings by Domain (navigation index)
+- **Section 7**: Statistics
+- **Section 8**: Recommendations (prioritized action plan)
+
+**Reading workflow**:
+
+```markdown
+1. Read Executive Summary (2 min)
+   → Get overview: How many CRITICAL? How many HIGH?
+   → Example: "CRITICAL: 8 issues requiring immediate attention"
+
+2. Jump to Section 3: CRITICAL & HIGH Issues
+   → ALL detailed (not sampled!)
+   → Each finding has:
+     • File:line location
+     • Problem description (1-2 lines)
+     • Impact (concrete consequences)
+     • Fix (1-line hint or code example)
+
+3. Triage CRITICAL issues immediately
+   → If you see "SQL injection", "missing auth", "thread leak" → FIX NOW
+   → Create tickets for each CRITICAL issue
+
+4. Review Section 8: Recommendations
+   → Organized by priority: Immediate, Near-Term, Long-Term
+   → Focus on "Quick Wins" (high impact, low effort)
+```
+
+---
+
+### 2. Understanding Quick Reference Tables (v2.4)
+
+**What are Quick Reference Tables?**
+
+Every domain-specific file (`security_findings.md`, `performance_findings.md`, etc.) starts with a **Quick Reference Table** that indexes **ALL findings** (100%).
+
+**Format**:
+
+| ID | Severity | Category | File:Line | Brief Description |
+|----|----------|----------|-----------|-------------------|
+| SEC-001 | CRITICAL | SQL_INJ | UserRepo.java:45 | String concatenation in query |
+| SEC-002 | HIGH | MISS_AUTH | AdminCtrl.java:23 | No @PreAuthorize on DELETE |
+| ... | ... | ... | ... | ... |
+| SEC-250 | LOW | WEAK_HASH | UtilService.java:890 | MD5 used instead of SHA256 |
+
+**How to use Quick Reference Tables**:
+
+1. **Quick scan**: Scroll table to see all findings at a glance
+2. **Filter by severity**: Look for CRITICAL/HIGH rows first
+3. **Filter by category**: Group similar issues (e.g., all SQL_INJ)
+4. **Navigate**: Use ID to find detailed finding below
+
+**Example workflow**:
+
+```
+1. Open security_findings.md
+2. Scan Quick Reference Table (at top)
+3. Count CRITICAL: 8 findings
+4. Filter table for CRITICAL severity
+5. IDs found: SEC-001, SEC-004, SEC-007, SEC-012, SEC-023, SEC-045, SEC-089, SEC-234
+6. Scroll down to "Detailed Findings" section
+7. Search for "SEC-001" → read full 5-line description
+8. Repeat for all 8 CRITICAL findings
+```
+
+---
+
+### 3. v2.4 Output Strategy Explained
+
+**Key principle**: ALL CRITICAL + ALL HIGH detailed, rest strategically sampled
+
+#### CRITICAL Findings
+- **Coverage**: 100% detailed (no omissions)
+- **Format**: 5 lines per finding (File, Severity, Problem, Impact, Fix)
+- **Location**:
+  - Main report Section 3 (all CRITICAL issues)
+  - Domain file "Detailed Findings" section
+
+**Example**:
+```markdown
+### SEC-001: SQL Injection via String Concatenation
+**File**: `UserRepository.java:45`
+**Severity**: CRITICAL
+**Problem**: Query constructed with string concatenation using user input
+**Impact**: Attacker can execute arbitrary SQL (data breach, deletion)
+**Fix**: Use PreparedStatement with parameterized queries
+```
+
+#### HIGH Findings
+- **Coverage**: 100% detailed (no omissions)
+- **Format**: Same 5-line format as CRITICAL
+- **Location**: Main report Section 3 + domain files
+
+#### MEDIUM Findings
+- **Coverage**:
+  - 5 representative samples detailed (5 lines each)
+  - Remaining in Quick Reference Table (1 line each)
+- **Rationale**: Showing 5 examples helps understand the pattern without reading 120+ similar issues
+
+#### LOW Findings
+- **Coverage**: Same as MEDIUM (5 samples detailed + rest in Quick Ref Table)
+- **Rationale**: Low-priority optimizations that can be addressed in backlog
+
+---
+
+### 4. Navigation Strategies
+
+#### Strategy A: Top-Down (Recommended for First Read)
+
+```
+1. Read CODE_REVIEW_REPORT_v2.4.md
+   ├─ Section 1: Understand project context
+   ├─ Section 3: Absorb all CRITICAL/HIGH (may take 30-60 min)
+   ├─ Section 8: Note prioritized recommendations
+   └─ Decision: Which issues to fix first?
+
+2. Deep-dive into specific domain
+   ├─ Open security_findings.md (if CRITICAL security issues found)
+   ├─ Read Quick Reference Table (scan all findings)
+   ├─ Read detailed CRITICAL findings (full context)
+   └─ Understand patterns (e.g., "8 SQL injections, all in *Repository.java files")
+
+3. Plan fixes
+   ├─ Group similar issues (e.g., "all missing @PreAuthorize")
+   ├─ Estimate effort (e.g., "15 min per endpoint = 3 hours total")
+   └─ Schedule work
+```
+
+#### Strategy B: Domain-Specific (For Specialists)
+
+**Use case**: Performance engineer wants to review only performance issues
+
+```
+1. Skip main report, go directly to performance_findings.md
+2. Read Quick Reference Table
+3. Filter for CRITICAL/HIGH in table
+4. Read detailed findings for those IDs
+5. Implement fixes
+```
+
+#### Strategy C: Issue-Specific (For Targeted Fixes)
+
+**Use case**: CTO says "Fix all SQL injection issues immediately"
+
+```
+1. Open security_findings.md
+2. Find Quick Reference Table
+3. Filter table for Category = "SQL_INJ"
+4. Get all IDs (e.g., SEC-001, SEC-004, SEC-012)
+5. For each ID, find detailed finding
+6. Implement fixes following recommendations
+7. Verify all SQL_INJ IDs addressed
+```
+
+---
+
+### 5. Interpreting Severity Levels
+
+| Severity | Meaning | Timeframe | Example |
+|----------|---------|-----------|---------|
+| **CRITICAL** | Data breach, system crash, security exploit | **Fix immediately** (same day) | SQL injection, missing auth on admin endpoint, thread leak causing OOM |
+| **HIGH** | Significant performance degradation, authentication weakness | **Fix this sprint** (1-2 weeks) | N+1 query (15s response), missing circuit breaker, race condition |
+| **MEDIUM** | Code quality issue, minor performance concern | **Fix next sprint** (2-4 weeks) | God class (3000 LOC), missing cache, inefficient algorithm |
+| **LOW** | Style improvement, minor optimization | **Backlog** (when convenient) | Unused import, javadoc missing, variable naming |
+
+**Confidence Scoring** (if provided):
+- **90%+**: Verified issue, definitely needs fixing
+- **70-90%**: Probable issue, verify before fixing
+- **50-70%**: Possible issue, needs manual investigation
+- **<50%**: Potential false positive, low priority
+
+---
+
+### 6. Post-Analysis Workflow
+
+#### Step 1: Triage (Day 1 - 2 hours)
+
+```
+1. Read main report Executive Summary
+2. Count CRITICAL issues
+3. Create Jira/GitHub issues for each CRITICAL finding
+   - Title: "[CRITICAL] {finding title}"
+   - Description: Copy from report (File, Problem, Impact, Fix)
+   - Priority: P0
+   - Assignee: Senior engineer
+4. Repeat for HIGH issues (Priority: P1)
+```
+
+#### Step 2: Quick Wins (Day 1-2 - 4 hours)
+
+Look for configuration-only fixes (no code changes):
+
+**Examples from report Section 8 "Recommendations"**:
+- Add `hibernate.jdbc.batch_size: 25` → application.yml (10 min)
+- Reduce Feign timeout from 100s to 10s → application.yml (5 min)
+- Add `@PreAuthorize` to 5 endpoints → controllers (30 min)
+
+**Total**: 45 min effort, 3-5x performance improvement
+
+#### Step 3: Sprint Planning (Day 3 - 1 hour)
+
+```
+1. Group issues by category
+   - All SQL injections → 1 epic
+   - All N+1 queries → 1 epic
+   - All missing auth → 1 epic
+
+2. Estimate effort
+   - CRITICAL: 2-4 hours per issue (senior engineer)
+   - HIGH: 1-2 hours per issue (mid-level engineer)
+   - MEDIUM: 30 min - 1 hour per issue (junior engineer)
+
+3. Prioritize by impact/effort ratio
+   - High impact + low effort = do first
+   - High impact + high effort = schedule carefully
+   - Low impact + high effort = defer
+```
+
+#### Step 4: Execution (Weeks 1-4)
+
+**Sprint 1**:
+- Fix all CRITICAL issues (target: 100% resolved)
+- Fix top 50% HIGH issues (quick wins)
+
+**Sprint 2**:
+- Fix remaining HIGH issues
+- Start MEDIUM issues (architectural improvements)
+
+**Sprint 3-4**:
+- Continue MEDIUM issues
+- Address LOW issues if time permits
+
+#### Step 5: Verification (Ongoing)
+
+After each fix:
+1. Run tests
+2. Deploy to staging
+3. Verify issue resolved
+4. Update Jira with "Fixed in commit {hash}"
+5. Mark finding ID as "RESOLVED" in tracking sheet
+
+#### Step 6: Re-analysis (Month 2)
+
+```
+1. Run framework again on same codebase
+2. Compare findings:
+   - New issues introduced?
+   - Old issues still present?
+   - Progress metrics
+3. Iterate
+```
+
+---
+
+### 7. Common Questions
+
+**Q: How do I know the analysis is complete?**
+
+A: Check these indicators in the report:
+- ✅ "Analisi: Completa 100%" in header
+- ✅ manifest.json shows all files analyzed
+- ✅ All agents completed (security, performance, concurrency, etc.)
+- ✅ Validation passed (declared_count === actual_count for each agent)
+- ✅ No warnings about skipped files or incomplete domains
+
+**Q: I have 250 findings. Do I need to read all of them?**
+
+A: No! Use the v2.4 prioritization:
+1. Read ALL CRITICAL (detailed in Section 3) - may be 5-10 issues
+2. Read ALL HIGH (detailed in Section 3) - may be 20-30 issues
+3. Scan MEDIUM Quick Reference Table - understand patterns
+4. Ignore LOW for now - defer to backlog
+
+**Q: What if I disagree with a severity level?**
+
+A: Adjust based on your context:
+- Production system: Hardcoded password = CRITICAL
+- Internal tool: Hardcoded password = HIGH
+- Proof-of-concept: Hardcoded password = MEDIUM
+
+Update your tracking accordingly.
+
+**Q: How do I share results with my team?**
+
+A: Multiple options:
+1. **Exec team**: Send main report Executive Summary (Section 1)
+2. **Developers**: Share domain-specific files (security_findings.md, etc.)
+3. **PM/PO**: Send Section 8 Recommendations (prioritized action plan)
+4. **Architect**: Share findings-all.json for programmatic analysis
+
+**Q: Can I filter findings programmatically?**
+
+A: Yes! Use `findings-all.json`:
+
+```bash
+# Extract all CRITICAL findings
+cat findings-all.json | jq '.[] | select(.severity=="CRITICAL")'
+
+# Count by severity
+cat findings-all.json | jq 'group_by(.severity) | map({severity: .[0].severity, count: length})'
+
+# Filter by file
+cat findings-all.json | jq '.[] | select(.file | contains("UserService"))'
+```
+
+---
+
+### 8. Tips for Effective Analysis Review
+
+**Do**:
+- ✅ Read CRITICAL issues first (always)
+- ✅ Group similar findings (e.g., "all N+1 queries")
+- ✅ Look for patterns (e.g., "all SQL injection in *Repository files")
+- ✅ Use Quick Reference Tables for scanning (fast)
+- ✅ Focus on high impact/low effort fixes first ("Quick Wins")
+- ✅ Share domain-specific files with specialists
+- ✅ Track progress in a spreadsheet or Jira board
+- ✅ Re-run analysis after major changes
+
+**Don't**:
+- ❌ Read findings in sequential order (waste of time)
+- ❌ Try to fix everything at once (burnout)
+- ❌ Ignore Quick Reference Tables (they save time!)
+- ❌ Skip MEDIUM/LOW entirely (some may be quick fixes)
+- ❌ Debate severity levels for hours (adjust and move on)
+- ❌ Forget to verify fixes (re-run tests)
+
+---
+
+### 9. Success Metrics
+
+After addressing findings, measure impact:
+
+**Security**:
+- CRITICAL security issues: 0 remaining (target: 100% fixed)
+- HIGH security issues: < 5 remaining (target: 90% fixed)
+
+**Performance**:
+- Response time improvement: measured before/after
+- Database query count: measured reduction
+- Memory usage: measured decrease
+
+**Code Quality**:
+- God classes refactored: tracked count
+- Test coverage: measured improvement
+- Technical debt hours: measured reduction
+
+**Team Velocity**:
+- New features: development speed increase
+- Bug fixes: resolution time improvement
+
+---
+
+### 10. Summary
+
+**Quick Reference**:
+1. **Start**: CODE_REVIEW_REPORT_v2.4.md → Section 1 (Executive Summary)
+2. **Focus**: Section 3 → ALL CRITICAL + HIGH issues (100% detailed)
+3. **Quick wins**: Section 8 → Recommendations (prioritized)
+4. **Deep dive**: Domain files → Use Quick Reference Tables
+5. **Track**: Create tickets, assign, fix, verify
+6. **Iterate**: Re-run analysis monthly
+
+**Remember**: v2.4 means **ALL CRITICAL/HIGH documented in detail** (not sampled). You'll never miss a critical issue.
+
+---
+
 ## Real-World Results
 
 ### Spring Boot Microservice (85K LOC)
