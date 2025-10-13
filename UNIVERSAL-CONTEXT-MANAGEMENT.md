@@ -8,37 +8,42 @@
 
 ## ⛔ ABSOLUTE PROHIBITIONS - CONTEXT MANAGEMENT
 
-**VIOLATION = CONTEXT OVERFLOW - ANALYSIS FAILS**
+**VIOLATION = CONTEXT OVERFLOW → ANALYSIS FAILS**
 
-1. ❌ **FORBIDDEN** to exceed 95% context usage without Progressive Writing
-2. ❌ **FORBIDDEN** to keep all findings in memory without disk writes
-3. ❌ **FORBIDDEN** to confuse compression (temporary) with skipping (permanent)
-4. ❌ **FORBIDDEN** to compress CRITICAL or HIGH findings in final output
-5. ❌ **FORBIDDEN** to proceed without monitoring context usage every 10 files
-6. ❌ **FORBIDDEN** to use Standard Output Strategy on codebase >100K LOC
-7. ❌ **FORBIDDEN** to accumulate findings without write-clear-continue pattern
-8. ❌ **FORBIDDEN** to apply sampling during analysis (only in final output)
-9. ❌ **FORBIDDEN** to ignore dynamic write intervals based on context usage
-10. ❌ **FORBIDDEN** to overflow context due to "completeness" misunderstanding
+1. ❌ **FORBIDDEN** to exceed 95% context usage without activating Progressive Writing
+2. ❌ **FORBIDDEN** to keep all findings in memory instead of using write-clear-continue pattern
+3. ❌ **FORBIDDEN** to use Standard Strategy on codebases >100K LOC
+4. ❌ **FORBIDDEN** to compress or summarize CRITICAL/HIGH severity findings
+5. ❌ **FORBIDDEN** to skip context monitoring (must check every 10 files)
+6. ❌ **FORBIDDEN** to continue analysis after context overflow warning
+7. ❌ **FORBIDDEN** to batch write findings without clearing memory afterward
+8. ❌ **FORBIDDEN** to ignore dynamic write interval adjustments
+9. ❌ **FORBIDDEN** to analyze entire codebase without LOC count first
+10. ❌ **FORBIDDEN** to choose strategy without considering estimated finding count
 
 ---
 
-## 🚨 FATAL ERRORS - CONTEXT MANAGEMENT FAILURES
+## 🚨 FATAL ERRORS - CONTEXT VIOLATIONS
 
-### FATAL-501: Context Overflow
+### FATAL-201: Context Overflow
 - **Condition**: Context usage exceeds 95% without activating Progressive Writing
-- **Consequence**: Analysis FAILS - context window exceeded
-- **Recovery**: Immediately activate Progressive Writing, write all findings to disk, clear memory
+- **Consequence**: Analysis FAILS - findings lost to truncation
+- **Recovery**: Switch to Progressive Writing immediately, initialize output files
 
-### FATAL-502: Findings Lost to Compression
-- **Condition**: Findings compressed in memory never written to disk
-- **Consequence**: Findings LOST - analysis INCOMPLETE
-- **Recovery**: Write ALL findings (compressed or not) to disk before clearing memory
+### FATAL-202: Findings Lost to Compression
+- **Condition**: CRITICAL or HIGH findings compressed during analysis
+- **Consequence**: Analysis INCOMPLETE - critical issues missing
+- **Recovery**: Re-analyze with proper memory management, never compress high-severity
 
-### FATAL-503: Wrong Strategy Selected
-- **Condition**: Standard Output used on >100K LOC codebase
-- **Consequence**: Context overflow GUARANTEED - analysis FAILS
-- **Recovery**: Switch to Progressive Writing Strategy, restart analysis
+### FATAL-203: Wrong Strategy for Codebase Size
+- **Condition**: Standard Strategy used on codebase >100K LOC or >100 expected findings
+- **Consequence**: GUARANTEED FAILURE - context overflow inevitable
+- **Recovery**: Calculate LOC correctly, switch to Progressive Writing, restart analysis
+
+### FATAL-204: Write Without Clear Pattern
+- **Condition**: Findings written to disk but not cleared from memory
+- **Consequence**: Memory accumulation → context overflow
+- **Recovery**: Implement write-then-clear pattern: write batch, clear list, continue
 
 ---
 
