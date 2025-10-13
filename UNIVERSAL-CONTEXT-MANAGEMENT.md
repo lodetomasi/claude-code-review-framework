@@ -1,75 +1,55 @@
-# Universal Context Management Instructions - Full Spectrum Analysis
+# UNIVERSAL CONTEXT MANAGEMENT - AI EXECUTION RULES
 
-**Version**: 3.0
-**Date**: 2025-10-12
-**Framework**: claude-code-review-framework
-**Purpose**: Smart in-memory compression for context-efficient comprehensive analysis
-**Breaking Changes from v2.3**:
-- Fixed Progressive Compression vs Completeness contradiction (added RULE HIERARCHY)
-- v2.4 Output Strategy → v3.0 Unified Strategy (count-based sampling)
-- Sampling threshold: >500K LOC (was >100K LOC)
+**Version**: 3.0 (AI-Optimized)
+**Mandatory Reading**: Step 3 in execution sequence
+**Last Updated**: 2025-10-13
 
 ---
 
-## 📚 READING CONTEXT
+## ⛔ ABSOLUTE PROHIBITIONS - CONTEXT MANAGEMENT
 
-**This document is Step 5.5 and 5.6** in the reading order defined in [START-HERE.md](START-HERE.md).
+**VIOLATION = CONTEXT OVERFLOW - ANALYSIS FAILS**
 
-**If you arrived here directly**: Read [START-HERE.md](START-HERE.md) first to understand:
-- When to use Universal Context Management (Step 5.5): codebases > 50K LOC
-- When to use Progressive Writing Strategy (Step 5.6): codebases > 100K LOC or > 100 expected findings
-
-**This document contains TWO critical strategies**:
-1. **Universal Context Management** (Step 5.5): Smart compression for 50-100K LOC
-2. **Progressive Writing Strategy** (Step 5.6): Incremental disk writes for >100K LOC
-
-**NEW in v3.0**: Also read [FRAMEWORK-RULES-HIERARCHY.md](FRAMEWORK-RULES-HIERARCHY.md) to understand rule priority when there are conflicts
-
-🎯 **[→ GO TO START-HERE.md](START-HERE.md)** if you need to understand when to apply these strategies.
-
----
-
-## 🎯 FUNDAMENTAL PRINCIPLES
-1. **Analyze ALL aspects with EQUAL priority**: Security, Performance, Concurrency, Architecture
-2. **Manage context window ACTIVELY**: Monitor usage, compress intelligently, never overflow
-3. **Maintain FULL quality**: Complete output regardless of codebase size
+1. ❌ **FORBIDDEN** to exceed 95% context usage without Progressive Writing
+2. ❌ **FORBIDDEN** to keep all findings in memory without disk writes
+3. ❌ **FORBIDDEN** to confuse compression (temporary) with skipping (permanent)
+4. ❌ **FORBIDDEN** to compress CRITICAL or HIGH findings in final output
+5. ❌ **FORBIDDEN** to proceed without monitoring context usage every 10 files
+6. ❌ **FORBIDDEN** to use Standard Output Strategy on codebase >100K LOC
+7. ❌ **FORBIDDEN** to accumulate findings without write-clear-continue pattern
+8. ❌ **FORBIDDEN** to apply sampling during analysis (only in final output)
+9. ❌ **FORBIDDEN** to ignore dynamic write intervals based on context usage
+10. ❌ **FORBIDDEN** to overflow context due to "completeness" misunderstanding
 
 ---
 
-## ⚖️ RULE HIERARCHY (v3.0 - CRITICAL)
+## 🚨 FATAL ERRORS - CONTEXT MANAGEMENT FAILURES
 
-**When rules conflict, follow this priority order**:
+### FATAL-501: Context Overflow
+- **Condition**: Context usage exceeds 95% without activating Progressive Writing
+- **Consequence**: Analysis FAILS - context window exceeded
+- **Recovery**: Immediately activate Progressive Writing, write all findings to disk, clear memory
 
-### PRIORITY 1: COMPLETENESS (Non-Negotiable)
-```
-FROM COMPLETENESS-ENFORCEMENT.md:
-- You MUST find and document ALL findings
-- Pre-analysis ESTIMATION (not exact count) is mandatory
-- Validation checks actual_count is within [min, max] range
-```
+### FATAL-502: Findings Lost to Compression
+- **Condition**: Findings compressed in memory never written to disk
+- **Consequence**: Findings LOST - analysis INCOMPLETE
+- **Recovery**: Write ALL findings (compressed or not) to disk before clearing memory
 
-### PRIORITY 2: CONTEXT MANAGEMENT (Enabler)
-```
-FROM THIS DOCUMENT:
-- Progressive Compression is HOW you achieve completeness within context limits
-- Compress during analysis, expand for final output
-- NEVER compress CRITICAL/HIGH findings
-- Write to disk progressively to free context
-```
+### FATAL-503: Wrong Strategy Selected
+- **Condition**: Standard Output used on >100K LOC codebase
+- **Consequence**: Context overflow GUARANTEED - analysis FAILS
+- **Recovery**: Switch to Progressive Writing Strategy, restart analysis
 
-### PRIORITY 3: OUTPUT STRATEGY (Presentation)
-```
-FROM THIS DOCUMENT (v3.0 Unified Strategy):
-- Count-based sampling rules for final output
-- MEDIUM: <20 = ALL, 20-50 = top 10 + Quick Ref, >50 = top 5 + Quick Ref
-- LOW: <15 = ALL, 15-40 = top 8 + Quick Ref, >40 = top 3 + Quick Ref
-- CRITICAL/HIGH: ALWAYS ALL (never sampled)
-```
+---
 
-**Conflict Resolution Example**:
-- COMPLETENESS says "document ALL findings"
-- CONTEXT MANAGEMENT says "compress during analysis"
-- **Resolution**: Document all during analysis (compressed in memory), write all to disk progressively, apply sampling only for final presentation if >20 MEDIUM or >15 LOW
+## RULE HIERARCHY (V3.0)
+
+**Priority Order**: COMPLETENESS > CONTEXT MANAGEMENT > OUTPUT STRATEGY
+
+**Compression Rules**:
+- During analysis: compress in memory (temporary)
+- Write to disk: expand ALL findings (permanent)
+- Final output: apply count-based sampling (presentation)
 
 ---
 
@@ -183,10 +163,11 @@ Chunk 4: Architecture analysis on core only
 Aggressive compression between chunks
 ```
 
-**VERY LARGE (100K-500K LOC)**: Progressive Writing with Full Analysis
+**VERY LARGE (>100K LOC OR >100 findings OR context >80%)**: Progressive Writing with Full Analysis
+
 ```
 Analyze 100% with Progressive Writing Strategy:
-- Write findings to disk every 50 findings (dynamic based on context)
+- Write findings to disk every N findings (dynamic based on context - see SAMPLING-RULES.md)
 - Clear from memory after writing
 - Full coverage maintained via disk storage
 - No sampling during analysis
@@ -534,16 +515,9 @@ for file in all_files:
     count += len(issues)
 
     # v3.0: Dynamic write interval based on context usage
+    # See SAMPLING-RULES.md for complete algorithm
     context_usage = get_context_usage_percentage()
-
-    if context_usage < 70:
-        write_interval = 50
-    elif context_usage < 85:
-        write_interval = 25
-    elif context_usage < 95:
-        write_interval = 10
-    else:
-        write_interval = 1  # Write immediately
+    write_interval = calculate_write_interval(context_usage)  # Defined in SAMPLING-RULES.md
 
     # FLUSH TO DISK when threshold reached
     if count % write_interval == 0:
@@ -567,19 +541,9 @@ After writing ALL findings, apply count-based sampling:
 ```python
 def apply_v3_unified_sampling(findings_file):
     """
-    v3.0 Unified Output Strategy (Count-Based):
+    v3.0 Unified Output Strategy (Count-Based Sampling)
 
-    CRITICAL/HIGH: ALWAYS ALL (never sampled)
-
-    MEDIUM:
-    - If <20: Keep ALL
-    - If 20-50: Top 10 detailed + Quick Reference Table
-    - If >50: Top 5 detailed + Quick Reference Table
-
-    LOW:
-    - If <15: Keep ALL
-    - If 15-40: Top 8 detailed + Quick Reference Table
-    - If >40: Top 3 detailed + Quick Reference Table
+    For complete rules, see: SAMPLING-RULES.md#-count-based-sampling-rules-v30
     """
 
     findings = read_all_findings(findings_file)

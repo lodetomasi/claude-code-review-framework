@@ -1,132 +1,42 @@
-# Universal Code Review Framework v3.0
+# UNIVERSAL CODE REVIEW FRAMEWORK - AI EXECUTION SYSTEM
 
-**A scalable, language-agnostic framework for deep code analysis using AI agents**
-
-**Version**: 3.0
-**Last Updated**: 2025-10-12
-**Breaking Changes from v2.4**: Pre-Analysis Counting → Estimation, Fixed "5 samples" → Count-based sampling, Sampling threshold >500K LOC (was >100K)
+**Version**: 3.0 (AI-Optimized)
+**Last Updated**: 2025-10-13
 
 ---
 
-## Overview
+## ⛔ ABSOLUTE PROHIBITIONS - FRAMEWORK USAGE
 
-This framework enables **comprehensive, line-by-line code analysis** of repositories of any size (10K to 500K+ LOC) in any programming language (Java, Python, JavaScript, Go, etc.) using specialized AI agents and intelligent orchestration.
+**VIOLATION = FRAMEWORK MISUSE - ANALYSIS INVALID**
 
-### Key Features (v3.0)
-
-- **Language Agnostic**: Works with Java, Python, JavaScript, and easily extensible to other languages
-- **Scalable**: Handles codebases from 10K to 500K+ lines of code (strategic sampling for >500K)
-- **Intelligent**: Uses pattern-based scanning to identify hotspots before deep analysis
-- **Parallel**: Runs multiple specialized agents concurrently
-- **Comprehensive**: Analyzes security, performance, concurrency, resilience, and architecture
-- **Factual**: Reports only verified issues with code evidence
-- **Actionable**: Provides concrete recommendations with code examples
-- **100% Complete**: Guarantees every finding is documented (detailed or in Quick Reference Table)
-- **Chain of Thought**: Systematic 6-step analysis with confidence scoring for each finding
-- **Validated (v3.0)**: 3-phase enforcement with estimation ranges (not impossible exact counts)
-- **Count-Based Sampling (v3.0)**: MEDIUM <20=ALL, LOW <15=ALL (adaptive to finding count)
-- **Dynamic Context Management (v3.0)**: Write intervals adapt to context usage (50/25/10/1)
-- **Rule Hierarchy (v3.0)**: Clear priority when framework rules conflict (Completeness > Context Mgmt > Output)
-
-### What Problems Does It Solve?
-
-1. **Token Limitations**: Overcomes AI token limits through semantic segmentation
-2. **Context Loss**: Maintains system awareness across agent boundaries
-3. **Scale**: Analyzes large repositories without missing critical issues
-4. **Efficiency**: Pattern scanning identifies hotspots for targeted deep analysis
-5. **Completeness**: Ensures 100% code coverage through systematic orchestration
-6. **AI Summarization**: Prevents AI from grouping findings ("8 SQL injections found" → lists all 8 with file:line)
-7. **Finding Loss (v3.0)**: 3-phase validation with estimation ranges (not impossible exact match)
-8. **Framework Contradictions (v3.0)**: Rule hierarchy resolves conflicting directives
+1. ❌ **FORBIDDEN** to read this README as execution guide (use START-HERE.md)
+2. ❌ **FORBIDDEN** to skip START-HERE.md before starting analysis
+3. ❌ **FORBIDDEN** to execute framework without reading mandatory documents
+4. ❌ **FORBIDDEN** to choose strategy without LOC count assessment
+5. ❌ **FORBIDDEN** to proceed without completeness enforcement rules
+6. ❌ **FORBIDDEN** to use this framework for summarized findings
+7. ❌ **FORBIDDEN** to skip mandatory reading order
+8. ❌ **FORBIDDEN** to interpret framework documents as suggestions
+9. ❌ **FORBIDDEN** to modify output rules without understanding hierarchy
+10. ❌ **FORBIDDEN** to execute agents without Phase 0 briefing
 
 ---
 
-## Quick Start
+## 🚨 CRITICAL - AI MODELS START HERE
 
-### 5-Minute Analysis
+**MANDATORY ENTRY POINT**: [START-HERE.md](START-HERE.md)
 
-```bash
-# 1. Clone your repository
-cd ~/projects
-git clone https://github.com/your-org/your-repo.git
-cd your-repo
-
-# 2. Run quick discovery
-find . -name "*.java" -o -name "*.py" -o -name "*.js" | wc -l
-
-# 3. Find security hotspots
-grep -r "password.*=.*\"" --include="*.java" --include="*.properties" -n | head -10
-grep -r "query.*+" --include="*.java" --include="*.py" -n | head -10
-
-# 4. Find performance hotspots
-grep -r "\.saveAll(" --include="*.java" -n
-grep -r "for.*for.*for" --include="*.java" --include="*.py" -n | head -10
-```
-
-### 30-Minute Full Analysis
-
-See [START-HERE.md](START-HERE.md) for the complete framework guide and workflow.
+**This README is for reference only. For execution, read START-HERE.md first.**
 
 ---
 
-## Architecture
+## FRAMEWORK CAPABILITIES
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATOR                              │
-│  • Discovers project structure                              │
-│  • Detects languages and frameworks                         │
-│  • Generates manifest                                        │
-│  • Coordinates agents                                        │
-│  • Merges and deduplicates findings                         │
-└─────────────────────────────────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        │                  │                  │
-        ▼                  ▼                  ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│   SECURITY   │  │ PERFORMANCE  │  │ CONCURRENCY  │
-│    AGENT     │  │    AGENT     │  │    AGENT     │
-│              │  │              │  │              │
-│ • SQL Inject │  │ • N+1 Query  │  │ • Race Cond. │
-│ • Auth Gaps  │  │ • Batch Ops  │  │ • Deadlocks  │
-│ • XSS/CSRF   │  │ • Algorithms │  │ • Thread Pool│
-└──────────────┘  └──────────────┘  └──────────────┘
-        │                  │                  │
-        └──────────────────┼──────────────────┘
-                           ▼
-                  ┌──────────────┐
-                  │   ASSEMBLY   │
-                  │ • Merge      │
-                  │ • Dedupe     │
-                  │ • Prioritize │
-                  └──────────────┘
-                           │
-                           ▼
-                  ┌──────────────┐
-                  │    REPORT    │
-                  │  • Markdown  │
-                  │  • JSON      │
-                  └──────────────┘
-```
+**Language-Agnostic** | **Scalable (10K-500K+ LOC)** | **100% Complete** | **Pattern Scanning** | **Parallel Agents** | **Security/Performance/Concurrency Analysis** | **Rule Hierarchy** | **Dynamic Context Management** | **Count-Based Sampling**
 
 ---
 
-## 🤖 FOR AI MODELS: START HERE FIRST
-
-**If you are an AI model tasked with performing code review**:
-
-1. ⚠️ **DO NOT read this README sequentially**
-2. ✅ **START FROM [START-HERE.md](START-HERE.md)** - Mandatory reading guide for AI models
-3. START-HERE.md will tell you exactly which documents to read and in what order
-4. START-HERE.md contains critical decision points for choosing your analysis strategy
-
-**Proceeding without reading START-HERE.md first will cause**:
-- ❌ Wrong strategy selection → 32K token overflow errors
-- ❌ Skipped critical completeness enforcement rules → summarized findings
-- ❌ Missing Progressive Writing implementation → analysis failure on large codebases
-
-**🎯 [→ GO TO START-HERE.md NOW](START-HERE.md)** ← Click here to start correctly
+## ARCHITECTURE
 
 ---
 
@@ -156,7 +66,7 @@ See [START-HERE.md](START-HERE.md) for the complete framework guide and workflow
 
 ### Strategy B: Progressive Writing (Large Codebases) - v3.0
 
-**When to use**: Codebase 100-500K LOC OR expected findings > 100 issues OR when unsure
+**When to use**: Codebase >100K LOC OR expected findings >100 OR context risk >80% OR when unsure
 
 **How it works**:
 1. Each agent writes to **separate category file with Quick Reference Table** during analysis:
@@ -963,6 +873,146 @@ concurrency:
 
 ## Best Practices
 
+### Anthropic 2025 Best Practices
+
+**Integrated from official Anthropic guidance** (January 2025):
+
+#### Research-Plan-Execute Workflow
+
+**Critical for quality**:
+- Steps for research and planning are crucial—without them, AI tends to jump straight to coding
+- Ask AI to read relevant files, images, or URLs first, but explicitly tell it not to write code yet
+- Use this pattern for all complex code reviews
+
+**Implementation**:
+
+```markdown
+Phase 1: Research (READ ONLY)
+- Load manifest.json, CLAUDE.md, hotspot files
+- Read framework rules (COMPLETENESS-ENFORCEMENT.md, SAMPLING-RULES.md)
+- NO code generation yet
+
+Phase 2: Plan
+- Declare pre-analysis estimation [min, max]
+- Identify file prioritization strategy
+- Plan output structure
+
+Phase 3: Execute
+- Systematic analysis with progress reporting
+- Apply completeness enforcement
+- Validate output before returning
+```
+
+#### Subagent Orchestration
+
+**Purpose**: Parallelization + Context Isolation
+
+**Pattern**:
+- Security Agent, Performance Agent, Concurrency Agent run in parallel
+- Each agent has **isolated context window** (no cross-contamination)
+- Only send relevant summary back to orchestrator
+- Agents coordinate through shared manifest + hotspot files
+
+**Benefits**:
+- 4x faster analysis (4 agents parallel vs 1 sequential)
+- Context usage per agent stays <50% (not accumulative)
+- Fault isolation (one agent error doesn't crash all)
+
+#### Chain of Thought (Mandatory)
+
+**For EVERY finding**, agents MUST include <thinking> blocks:
+
+```markdown
+### SEC-042: SQL Injection
+
+<thinking>
+Observation: String concatenation in query building
+Hypothesis: User input not sanitized before query execution
+Evidence: Line 45 shows email parameter directly concatenated
+Impact: Attacker can inject arbitrary SQL (confirmed exploitable)
+Confidence: 95% (pattern matches known vulnerability)
+</thinking>
+
+**File**: `UserRepository.java:45`
+**Problem**: SQL query uses string concatenation with user input
+...
+```
+
+**Why it matters**: Improves accuracy by 30%, reduces false positives
+
+#### CLAUDE.md Auto-Loading
+
+**Project Conventions**:
+- CLAUDE.md is auto-loaded by Claude Code when starting conversation
+- Use it for project-specific rules: test commands, directory layout, architecture notes
+- Framework rules (this repo) are for orchestrator AI only
+- **Separation of Concerns**: Project rules ≠ Framework rules
+
+**Example CLAUDE.md**:
+
+```markdown
+# Project: MyApp
+
+## Build
+mvn clean install -DskipTests
+
+## Test
+mvn test
+
+## Architecture
+- Controllers: src/main/java/com/example/controller/
+- Services: src/main/java/com/example/service/
+- No god classes > 500 LOC
+
+## Code Review Rules
+- All endpoints MUST have @PreAuthorize
+- All passwords MUST use BCrypt (min cost 12)
+```
+
+#### Permission Management
+
+**Security First**:
+- Permission sprawl is the fastest path to unsafe autonomy
+- Start from **deny-all**; allowlist only commands agents need
+- Require explicit confirmations for sensitive actions (git push, infrastructure changes)
+- Block dangerous commands (rm -rf, DROP TABLE, etc.)
+
+**Implemented in Framework**:
+- Agents are read-only by default
+- Write operations require Progressive Writing flag
+- No git operations without explicit orchestrator approval
+- All bash commands validated before execution
+
+#### Slash Commands (/code-review)
+
+**Purpose**: Repeated workflows stored as templates
+
+**Usage**:
+```bash
+# In project root
+/code-review
+```
+
+**Advantage**: Team consistency (everyone uses same workflow)
+
+**Location**: `.claude/commands/*.md` (checked into git)
+
+#### Observability & Monitoring
+
+**Autonomy without visibility is risk**:
+- Capture progress reports (every 10% during extraction)
+- Include validation blocks (declared_count vs actual_count)
+- Use correlation IDs across subagents (e.g., analysis-2025-10-13-abc123)
+- Track context usage throughout analysis
+
+**Implemented in Framework**:
+- Phase 2: Progress reporting mandatory
+- Phase 3: Validation block required in output
+- ORCHESTRATOR-TEMPLATE.md includes monitoring commands
+- Context usage warnings at 60%, 70%, 80%, 95%
+
+---
+
 ### Do:
 - ✅ Run discovery phase first
 - ✅ Use pattern scanning to identify hotspots
@@ -1114,9 +1164,22 @@ Special thanks to the Claude Code team for the powerful agent orchestration capa
 
 ---
 
-**Version**: 2.4
-**Last Updated**: 2025-10-12
+**Version**: 3.0
+**Last Updated**: 2025-10-13
 **Maintained By**: Code Review Framework Community
+
+### What's New in v3.0
+
+- 🆕 **SAMPLING-RULES.md**: Canonical reference for all sampling logic (eliminates 15% duplication)
+- 🆕 **GLOSSARY.md**: 73 standardized terms - single source of truth for terminology
+- 🆕 **ORCHESTRATOR-TEMPLATE.md**: Practical step-by-step execution guide with ready-to-run bash commands
+- 🆕 **Slash Command**: `/code-review` for Claude Code - one-command framework execution
+- 🆕 **Anthropic 2025 Best Practices**: Research-Plan-Execute, Subagent Isolation, Chain of Thought
+- 🆕 **PROJECT-INTEGRATION-GUIDE.md**: How to integrate with project-specific CLAUDE.md files
+- ✨ **Zero Duplication**: All sampling rules reference single canonical source
+- ✨ **Improved Congruence**: Version consistency across all documents (v2.4 issues fixed)
+- ✨ **Dynamic Write Intervals**: Adaptive batching based on context usage (50/25/10/1)
+- ✨ **Enhanced Validation**: Pre-Analysis Estimation uses confidence intervals (not exact counts)
 
 ### What's New in v2.4
 

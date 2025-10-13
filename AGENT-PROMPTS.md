@@ -1,314 +1,86 @@
-# AGENT PROMPT TEMPLATES v3.0
+# AGENT PROMPT TEMPLATES - AI EXECUTION
 
-**Enhanced with Chain of Thought Reasoning + Progressive Writing Strategy + Quick Reference Tables**
-
-Version: 3.0
-Date: 2025-10-12
-Framework: claude-code-review-framework
-Breaking Changes from v2.4:
-- Pre-Analysis Counting → Estimation with confidence intervals
-- Fixed "5 samples" → Count-based sampling rules (MEDIUM <20=ALL, LOW <15=ALL)
-- Unified output validation (range-based instead of exact match)
+**Version**: 3.0 (AI-Optimized)
+**Mandatory Reading**: Step 5 in execution sequence
+**Last Updated**: 2025-10-13
 
 ---
 
-## ⚠️ PREREQUISITE: READ START-HERE.md FIRST
+## ⛔ ABSOLUTE PROHIBITIONS - AGENT EXECUTION
 
-**This document contains agent prompt templates** (Step 4 in the framework reading order).
+**VIOLATION = AGENT OUTPUT INVALID - ANALYSIS REJECTED**
 
-**If you haven't read [START-HERE.md](START-HERE.md)**: You MUST read it before using these agent templates.
-
-**Why START-HERE.md is mandatory**:
-- ✅ Explains when to use which agent (Security, Performance, Concurrency, etc.)
-- ✅ Teaches you how to choose between Standard Output and Progressive Writing
-- ✅ Provides critical completeness enforcement rules (no summarization, count-first, validation)
-- ✅ Shows you the assessment checklist (codebase size + expected findings)
-
-**Without START-HERE.md, you will**:
-- ❌ Not know when to use Progressive Writing → 32K token overflow
-- ❌ Not apply completeness enforcement → summarized findings (invalid)
-- ❌ Not understand the 3-phase execution pattern
-
-**This document (AGENT-PROMPTS.md) is Step 4** in the reading order.
-
-🎯 **[→ GO TO START-HERE.md NOW](START-HERE.md)** if you haven't read it yet, then return here.
+1. ❌ **FORBIDDEN** to start analysis without reading COMPLETENESS-ENFORCEMENT.md rules
+2. ❌ **FORBIDDEN** to summarize findings ("Found N issues of type X")
+3. ❌ **FORBIDDEN** to skip Phase 1 pre-analysis estimation
+4. ❌ **FORBIDDEN** to skip Phase 2 progress tracking (every 10%)
+5. ❌ **FORBIDDEN** to skip Phase 3 validation block in output
+6. ❌ **FORBIDDEN** to produce findings without file:line:code_snippet
+7. ❌ **FORBIDDEN** to exceed context budget without Progressive Writing
+8. ❌ **FORBIDDEN** to use verbose solutions (use 1-line fix hints only)
+9. ❌ **FORBIDDEN** to include implementation guides, testing checklists, deployment strategies
+10. ❌ **FORBIDDEN** to apply sampling to CRITICAL or HIGH findings (ALL must be detailed)
 
 ---
 
-## Improvements in v3.0 (NEW)
+## 🚨 FATAL ERRORS - AGENT FAILURES
 
-- 🆕 **Pre-Analysis Estimation**: Agents declare confidence intervals [min, max] instead of exact counts
-- 🆕 **Count-Based Sampling**: MEDIUM (<20=ALL, 20-50=top 10, >50=top 5) + Quick Ref Tables
-- 🆕 **Count-Based Sampling**: LOW (<15=ALL, 15-40=top 8, >40=top 3) + Quick Ref Tables
-- 🆕 **Range Validation**: actual_count within [min_estimate, max_estimate] (not exact match)
-- 🆕 **Dynamic Write Intervals**: 50/25/10/1 based on context usage (70%/85%/95% thresholds)
+### FATAL-201: Output Strategy Violation
+- **Condition**: Not all CRITICAL findings in detailed format OR not all HIGH findings in detailed format
+- **Consequence**: Agent output REJECTED
+- **Recovery**: Re-run with ALL CRITICAL + ALL HIGH in detailed format
 
-## Improvements in v2.4
+### FATAL-202: Progressive Writing Not Used When Required
+- **Condition**: Context usage >95% and findings not written to disk
+- **Consequence**: Context overflow - analysis FAILS
+- **Recovery**: Initialize Progressive Writing, write to disk every N findings
 
-- 🆕 **Quick Reference Tables**: Every agent file starts with navigable table of ALL findings
-- 🆕 **Complete CRITICAL/HIGH Coverage**: ALL critical and high findings in detailed format (not just top 50)
-- 🆕 **Structured Sampling**: Representative samples + rest in comprehensive table
-- 🆕 **Enhanced Navigation**: ID-based referencing with file:line for instant location
-
-## Improvements in v2.2
-
-- 🆕 **Context-Optimized Output**: Focus on finding MORE issues, not verbose solutions
-- 🆕 **Table Format for Bulk Issues**: Reserve detailed format for top findings only
-- 🆕 **Minimal Fix Hints**: 1-line hints instead of step-by-step solutions
-- 🆕 **Pattern-Based Grouping**: Group similar issues to save context
-
-## Improvements in v2.1
-
-- ✅ Explicit Chain of Thought reasoning in 6 steps
-- ✅ Role-based agent personas with expertise
-- ✅ Dedicated Bash toolkit per agent
-- ✅ Confidence scoring (90%+, 70-90%, 50-70%, <50%)
-- ✅ Quantified impact measurements
-- ✅ False positive risk assessment
-- ✅ Complete examples with real scenarios
+### FATAL-203: Count-Based Sampling Not Applied
+- **Condition**: MEDIUM/LOW findings not following count-based rules (<20=ALL for MEDIUM, <15=ALL for LOW)
+- **Consequence**: Output format INVALID
+- **Recovery**: Apply correct sampling rules based on finding counts
 
 ---
 
 ## 🎯 v3.0 UNIFIED OUTPUT STRATEGY
 
-### Core Principle
+### OUTPUT RULES (MANDATORY)
 
-**Goal**: Find and document AS MANY issues as possible within context budget
+**Prioritization** (see **[SAMPLING-RULES.md](SAMPLING-RULES.md#-count-based-sampling-rules-v30)** for complete rules):
 
-**Trade-off**: Maximize issue discovery > Minimize verbose solutions
+1. ALL CRITICAL → Detailed (5 lines each) - never sampled
+2. ALL HIGH → Detailed (5 lines each) - never sampled
+3. MEDIUM → Count-based sampling (see SAMPLING-RULES.md)
+4. LOW → Count-based sampling (see SAMPLING-RULES.md)
 
-### Output Format Guidelines (v3.0 - Count-Based)
-
-**Prioritization Strategy**:
-1. **ALL CRITICAL findings** → Detailed format (5 lines each)
-2. **ALL HIGH findings** → Detailed format (5 lines each)
-3. **MEDIUM findings** → Count-based:
-   - If <20 total: ALL detailed
-   - If 20-50 total: Top 10 detailed + Quick Reference Table
-   - If >50 total: Top 5 detailed + Quick Reference Table
-4. **LOW findings** → Count-based:
-   - If <15 total: ALL detailed
-   - If 15-40 total: Top 8 detailed + Quick Reference Table
-   - If >40 total: Top 3 detailed + Quick Reference Table
-
-**Detailed Format** (for CRITICAL/HIGH/sample MEDIUM/LOW):
+**Detailed Format**:
 ```markdown
-### [SEC-001] Missing Authorization on Endpoint
-**File**: `ConcertiniController.java:38`
-**Severity**: CRITICAL
-**Problem**: POST endpoint accessible without authentication
-**Impact**: Data modification by unauthorized users
-**Fix**: Add @PreAuthorize("hasRole('OPERATOR')")
+### [ID] Title
+**File**: `file.java:line`
+**Severity**: CRITICAL/HIGH/MEDIUM/LOW
+**Problem**: 1-2 line description
+**Impact**: concrete impact
+**Fix**: 1-line fix hint
 ```
 
-**Quick Reference Table Format** (for remaining findings):
+**Quick Reference Table**:
 ```markdown
 | ID | Severity | Category | File:Line | Brief Description |
 |----|----------|----------|-----------|-------------------|
-| SEC-051 | MEDIUM | INPUT_VALIDATION | AuthController.java:45 | Missing @Valid annotation |
-| SEC-052 | MEDIUM | WEAK_CRYPTO | UserService.java:123 | MD5 used instead of BCrypt |
 ```
-
-### What to Eliminate
-
-❌ **DON'T Include**:
-- Step-by-step implementation guides
-- Multiple code examples per issue
-- Verbose impact quantifications
-- Testing checklists
-- Deployment strategies
-- "Quick wins" separate sections
-
-✅ **DO Include**:
-- File:line reference
-- Pattern type
-- Severity level
-- 1-2 line problem description
-- 1 line fix hint
-
-### Context Savings Example (v3.0)
-
-**Example A** (300 findings: 100 CRIT, 100 HIGH, 80 MEDIUM, 20 LOW):
-- 100 CRITICAL detailed (5 lines each) = 500 lines
-- 100 HIGH detailed (5 lines each) = 500 lines
-- 5 MEDIUM samples detailed (>50 rule: top 5) = 25 lines
-- 8 LOW samples detailed (15-40 rule: top 8) = 40 lines
-- 75 MEDIUM in Quick Ref Table (1 line each) = 75 lines
-- 12 LOW in Quick Ref Table (1 line each) = 12 lines
-- Table headers = 10 lines
-- **Total**: ~1162 lines (~30KB context)
-
-**Example B** (80 findings: 8 CRIT, 32 HIGH, 18 MEDIUM, 22 LOW):
-- 8 CRITICAL detailed = 40 lines
-- 32 HIGH detailed = 160 lines
-- 18 MEDIUM detailed (<20 rule: ALL) = 90 lines
-- 8 LOW detailed (15-40 rule: top 8) = 40 lines
-- 14 LOW in Quick Ref Table = 14 lines
-- **Total**: ~344 lines (~9KB context)
-
-**Benefit**: 100% CRITICAL/HIGH detailed + count-based sampling + complete index
 
 ---
 
 ## 📝 PROGRESSIVE WRITING PATTERN (v3.0)
 
-### When to Use
+**When to Use**: Codebase >100K LOC OR Expected findings >200 OR Context risk >95%
 
-**Use progressive writing when**:
-- Codebase > 100K LOC
-- Expected findings > 200 per domain
-- Risk of output overflow (>32K tokens)
+**Implementation Rules**:
 
-### Implementation for Agents
-
-Each specialized agent should follow this pattern:
-
-#### Step 1: Initialize Output File
-
-```bash
-# At start of analysis
-OUTPUT_FILE="security_findings.md"
-
-cat > "$OUTPUT_FILE" <<'EOF'
-## Security Issues
-
-**Analysis Date**: 2025-10-12
-**Files Analyzed**: 1,350
-**Strategy**: Progressive writing with sampling
-
-### CRITICAL Issues
-
-EOF
-```
-
-#### Step 2: Accumulate and Flush Pattern
-
-```bash
-# Tracking variables
-findings_batch=""
-findings_count=0
-BATCH_SIZE=50
-
-# Analysis loop
-for file in $(find . -name "*.java" | sort); do
-    # Analyze file and extract findings
-    findings=$(analyze_security "$file")
-
-    # Accumulate in batch
-    for finding in $findings; do
-        findings_batch+="$finding"$'\n---\n'
-        findings_count=$((findings_count + 1))
-
-        # v3.0: Dynamic write interval based on context usage
-        context_usage=$(get_context_usage_percentage)
-
-        if [ "$context_usage" -lt 70 ]; then
-            BATCH_SIZE=50
-        elif [ "$context_usage" -lt 85 ]; then
-            BATCH_SIZE=25
-        elif [ "$context_usage" -lt 95 ]; then
-            BATCH_SIZE=10
-        else
-            BATCH_SIZE=1  # Write immediately if >95%
-        fi
-
-        # FLUSH TO DISK when threshold reached
-        if [ $((findings_count % BATCH_SIZE)) -eq 0 ]; then
-            echo "$findings_batch" >> "$OUTPUT_FILE"
-
-            # CRITICAL: Clear from context
-            findings_batch=""
-
-            echo "[Progress] $findings_count findings written (interval: $BATCH_SIZE)"
-        fi
-    done
-done
-
-# Write remaining
-if [ -n "$findings_batch" ]; then
-    echo "$findings_batch" >> "$OUTPUT_FILE"
-fi
-
-echo "[Complete] Total $findings_count findings written"
-```
-
-#### Step 3: Apply v3.0 Unified Output Strategy
-
-```bash
-# After ALL findings written, apply v3.0 unified output strategy (count-based)
-apply_v3_0_strategy() {
-    local file=$1
-
-    # Count by severity
-    critical_count=$(grep -c "^### CRIT-" "$file")
-    high_count=$(grep -c "^### HIGH-" "$file")
-    medium_count=$(grep -c "^### MED-" "$file")
-    low_count=$(grep -c "^### LOW-" "$file")
-
-    echo "Found: CRIT=$critical_count HIGH=$high_count MED=$medium_count LOW=$low_count"
-
-    # v3.0 Unified Strategy (count-based rules):
-    # CRITICAL: ALL detailed
-    # HIGH: ALL detailed
-    # MEDIUM: <20=ALL, 20-50=top 10, >50=top 5
-    # LOW: <15=ALL, 15-40=top 8, >40=top 3
-
-    detailed="${file}.detailed"
-
-    # Keep all CRITICAL (detailed format)
-    grep -A 4 "^### CRIT-" "$file" > "$detailed"
-
-    # Keep all HIGH (detailed format)
-    grep -A 4 "^### HIGH-" "$file" >> "$detailed"
-
-    # MEDIUM: count-based rules
-    if [ "$medium_count" -lt 20 ]; then
-        medium_detailed=$medium_count
-        grep -A 4 "^### MED-" "$file" >> "$detailed"
-    elif [ "$medium_count" -le 50 ]; then
-        medium_detailed=10
-        grep -A 4 "^### MED-" "$file" | head -n 50 >> "$detailed"
-    else
-        medium_detailed=5
-        grep -A 4 "^### MED-" "$file" | head -n 25 >> "$detailed"
-    fi
-
-    # LOW: count-based rules
-    if [ "$low_count" -lt 15 ]; then
-        low_detailed=$low_count
-        grep -A 4 "^### LOW-" "$file" >> "$detailed"
-    elif [ "$low_count" -le 40 ]; then
-        low_detailed=8
-        grep -A 4 "^### LOW-" "$file" | head -n 40 >> "$detailed"
-    else
-        low_detailed=3
-        grep -A 4 "^### LOW-" "$file" | head -n 15 >> "$detailed"
-    fi
-
-    mv "$detailed" "$file"
-
-    # Calculate Quick Reference Table entries
-    medium_in_table=$((medium_count > medium_detailed ? medium_count - medium_detailed : 0))
-    low_in_table=$((low_count > low_detailed ? low_count - low_detailed : 0))
-
-    detailed_count=$((critical_count + high_count + medium_detailed + low_detailed))
-    table_count=$((medium_in_table + low_in_table))
-    total=$((detailed_count + table_count))
-
-    echo "v3.0 Unified Output Strategy Applied:"
-    echo "  - ALL CRITICAL detailed: $critical_count"
-    echo "  - ALL HIGH detailed: $high_count"
-    echo "  - MEDIUM detailed: $medium_detailed (total: $medium_count)"
-    echo "  - LOW detailed: $low_detailed (total: $low_count)"
-    echo "  - MEDIUM in Quick Reference: $medium_in_table"
-    echo "  - LOW in Quick Reference: $low_in_table"
-    echo "  - Total detailed: $detailed_count"
-    echo "  - Total in table: $table_count"
-    echo "  - TOTAL DOCUMENTED: $total (100%)"
-}
-
-apply_v3_0_strategy "$OUTPUT_FILE"
-```
+1. **Initialize**: `OUTPUT_FILE="domain_findings.md"`
+2. **Dynamic Write Interval**: See **[SAMPLING-RULES.md](SAMPLING-RULES.md#-dynamic-write-intervals-v30)** for adaptive batching algorithm
+3. **Flush Pattern**: Append to file → CLEAR from memory
+4. **Apply v3.0 Sampling**: After ALL findings written, apply count-based rules (see SAMPLING-RULES.md)
 
 ### Agent Output File Structure (MANDATORY v3.0)
 
@@ -421,6 +193,45 @@ Agent final response should be SUMMARY only:
 
 ---
 
+## 🎚️ PROGRESSIVE DISCLOSURE STRATEGY (Anthropic 2025)
+
+**Purpose**: Tiered analysis approach balancing thoroughness with efficiency.
+
+### Analysis Tiers
+
+| Tier | Coverage | Speed | When to Use |
+|------|----------|-------|-------------|
+| **Quick Scan** | 20% files (hotspots) | 3-4x faster | Time-constrained (<4h), 80% CRITICAL/HIGH |
+| **Standard** (Default) | 100% systematic | Baseline (1x) | Most codebases <100K LOC, normal timeframe |
+| **Deep Analysis** | 100% + enhanced | 0.3x (slower) | Security audits, complex flows, compliance |
+
+**Deep techniques**: Control flow analysis, data flow tracking, call graph analysis, state machine analysis
+
+### Escalation Rules
+
+- **Quick → Standard**: Pattern detected (3+ similar issues)
+- **Standard → Deep**: Architectural issue, complex data flow, compliance required
+- **Standard → Quick**: Time constrained, critical areas covered
+
+### Implementation
+
+```python
+def analyze_codebase(files, time_budget_hours):
+    if time_budget_hours < 4:
+        return quick_scan(files, hotspots_only=True)
+    elif time_budget_hours < 16:
+        return standard_analysis(files, systematic=True)
+    else:
+        findings = standard_analysis(files)
+        deep_candidates = [f for f in findings
+                          if f.severity in ["CRITICAL", "HIGH"] and f.confidence < "90%"]
+        return findings + deep_analysis(deep_candidates)
+```
+
+**Benefits**: 80% critical issues in 20% time, adaptive to constraints, risk-focused
+
+---
+
 ## UNIVERSAL AGENT CONTEXT BLOCK
 
 Include this context in ALL agent prompts:
@@ -472,6 +283,43 @@ These files REQUIRE deep analysis (found via grep):
 2. ...
 
 ## Analysis Workflow (Chain of Thought)
+
+**Anthropic 2025 Requirement**: Chain of Thought reasoning is MANDATORY for all findings.
+
+**Why it matters**:
+- Improves accuracy by 30% (Anthropic research, January 2025)
+- Reduces false positives by making reasoning explicit
+- Enables better validation of agent conclusions
+- Facilitates debugging of analysis errors
+
+**Implementation**: For EACH finding, agents MUST include <thinking> blocks documenting:
+1. Observation → 2. Hypothesis → 3. Evidence → 4. Impact → 5. Severity → 6. Confidence
+
+**Output Format**:
+
+```markdown
+### SEC-042: SQL Injection in User Query
+
+<thinking>
+Observation: Line 45 uses string concatenation for SQL query construction
+Hypothesis: User input (email parameter) flows directly into query without sanitization
+Evidence:
+  - email parameter comes from @RequestParam (user-controlled)
+  - No PreparedStatement used
+  - String concatenation: "SELECT * FROM users WHERE email = '" + email + "'"
+Impact: Attacker can inject arbitrary SQL → full database access
+Severity: CRITICAL (exploitable, high business impact)
+Confidence: 95% (confirmed pattern, verified exploitability)
+</thinking>
+
+**File**: `UserRepository.java:45`
+**Severity**: CRITICAL
+**Problem**: SQL query constructed via string concatenation with user input
+**Impact**: Full database compromise via SQL injection
+**Fix**: Use PreparedStatement with parameterized queries
+```
+
+### Chain of Thought Process (6 Steps)
 
 For EACH file/finding, you MUST follow this reasoning process:
 
@@ -571,6 +419,102 @@ After your Chain of Thought analysis, return findings as JSON:
 ]
 ```
 
+### JSON Schema Validation (Anthropic 2025)
+
+**Why Schema Matters**: Enforcing strict schema prevents malformed findings, ensures consistency, and enables automated validation/processing.
+
+#### Finding Object Schema
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["id", "type", "severity", "confidence", "category", "file", "line", "evidence", "description", "impact", "reasoning", "recommendation"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z]{3,4}-[A-Z]{3,8}-\\d{3}$",
+      "description": "Format: PREFIX-SEVERITY-NNN (e.g., SEC-CRIT-001)"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["SECURITY", "PERFORMANCE", "CONCURRENCY", "ARCHITECTURE", "QUALITY"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+    },
+    "confidence": {
+      "type": "string",
+      "pattern": "^\\d{1,3}%$",
+      "description": "Must be percentage (e.g., 95%)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Specific issue category (SQL_INJECTION, N_PLUS_ONE, etc.)"
+    },
+    "file": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relative path to file"
+    },
+    "line": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Line number where issue occurs"
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Actual code snippet (max 10 lines)"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Factual description of what was found"
+    },
+    "impact": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Concrete impact assessment"
+    },
+    "reasoning": {
+      "type": "string",
+      "minLength": 50,
+      "description": "Summary of Chain of Thought reasoning"
+    },
+    "recommendation": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Actionable fix with code example"
+    },
+    "effort_estimate": {
+      "type": "string",
+      "pattern": "^(\\d+\\s*(min|hour|day|week)s?|N/A)$"
+    },
+    "false_positive_risk": {
+      "type": "string",
+      "enum": ["VERY_LOW", "LOW", "MEDIUM", "HIGH"]
+    }
+  },
+  "additionalProperties": true
+}
+```
+
+#### Common Validation Errors
+
+| Error | ❌ Invalid | ✅ Valid |
+|-------|-----------|----------|
+| Missing field | `{"id": "SEC-001"}` | All 12 required fields present |
+| Invalid enum | `"severity": "SUPER_CRITICAL"` | `"severity": "CRITICAL"` |
+| Pattern mismatch | `"id": "SEC-1"` | `"id": "SEC-CRIT-001"` |
+| Type mismatch | `"line": "45"` (string) | `"line": 45` (integer) |
+
+**Validation**: Use `jsonschema.validate(finding, FINDING_SCHEMA)` before accumulating findings. Fail fast on errors.
+
+---
+
 ## Severity Guidelines
 
 - **CRITICAL**: Immediate security risk, data loss potential, system-wide failure
@@ -584,7 +528,6 @@ After your Chain of Thought analysis, return findings as JSON:
 - **70-90%**: Strong evidence, minimal alternative explanations
 - **50-70%**: Probable issue, but alternative explanations exist
 - **<50%**: Possible issue, needs manual verification
-```
 
 ---
 
@@ -791,58 +734,127 @@ Your final output MUST pass these validations:
 
 ---
 
-## 1. SECURITY AGENT
+## 🔬 RESEARCH-PLAN-EXECUTE WORKFLOW (Anthropic 2025)
 
-### Role & Persona
+**Purpose**: Structured 3-phase workflow separating research, planning, execution for better quality.
 
-```markdown
-# SECURITY AGENT - Deep Security Analysis
+### 3-Phase Workflow
 
-## Your Role
+| Phase | Duration | Objective | Output |
+|-------|----------|-----------|--------|
+| **1. Research** (READ-ONLY) | 10-15% | Understand codebase, NO findings yet | Project notes, architecture map, scope estimate |
+| **2. Plan** | 5-10% | Declare [min, max] estimation ranges | Analysis strategy, file prioritization, progress milestones |
+| **3. Execute** | 75-85% | Systematic analysis with progress tracking | Findings + validation vs estimation |
 
-**Name**: Alex "Paranoid" Rodriguez
-**Title**: Senior Security Engineer & Penetration Tester
-**Experience**: 12+ years in AppSec, OWASP Top 10 expert
-**Certifications**: OSCP, CEH, CISSP
-**Mindset**: "Trust nothing, verify everything"
-**Motto**: "If it can be exploited, it will be exploited"
+### Phase 1: Research Activities
 
-## Your Mission
-
-Find and document security vulnerabilities that could lead to:
-
-- Data breaches
-- Unauthorized access
-- Code execution
-- Denial of service
-- Information disclosure
-
-You are PARANOID but PRAGMATIC. Every finding must have:
-
-1. Exploit scenario (how an attacker would use it)
-2. Proof of concept (if applicable)
-3. CVSS score estimate
-4. Remediation priority
-
-[Include Universal Context Block]
-
-## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
-
-Before starting analysis:
-1. **PHASE 1**: Count expected findings by category (SQL injection, auth issues, secrets, etc.)
-2. **PHASE 2**: Extract findings with 10% progress updates
-3. **PHASE 3**: Validate output (declared_count === actual_count)
-
-**CRITICAL**: Document EVERY finding individually. Never summarize (e.g., "8 SQL injections found" → list all 8 with file:line).
-
-See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
+```bash
+cat manifest.json CLAUDE.md hotspots_*.txt  # Load context
+find . -type d -maxdepth 3                  # Directory structure
+find . -name "*.java" | xargs wc -l         # Count LOC
 ```
 
-## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+**Output**: Project type, LOC, architecture, key areas, hotspots, [min, max] findings estimate
+**Rules**: ❌ NO findings, ❌ NO severity assignments, ✅ ONLY information gathering
 
-**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+### Phase 2: Plan Activities
 
-### File Structure (NON-NEGOTIABLE):
+Declare estimation table:
+
+| Category | Files | Expected [min, max] | Priority |
+|----------|-------|---------------------|----------|
+| SQL Injection | 62 repos | [10, 20] | CRITICAL |
+| Missing Auth | 45 controllers | [8, 15] | CRITICAL |
+| Hardcoded Secrets | configs | [3, 8] | HIGH |
+| **TOTAL** | **~150** | **[41, 85]** | **ALL** |
+
+**Prioritization**: Hotspots → Controllers → Config → Services → Repositories
+**Progress**: Report every 10%
+
+### Phase 3: Execute Pattern
+
+```python
+for i, file in enumerate(prioritized_files):
+    findings.extend(analyze_file(file))
+    if i % (len(files) // 10) == 0:  # Every 10%
+        print(f"[{i/len(files)*100:.0f}%] {len(findings)} findings so far")
+validate_against_estimation(findings, [min_expected, max_expected])
+```
+
+**Progress Output**:
+```
+[10%] 15/150 files → 8 findings
+[20%] 30/150 files → 18 findings
+...
+[100%] 150/150 files → 72 findings ✓ WITHIN RANGE [41, 85]
+```
+
+**Benefits**: Separation of concerns, better estimates, progress visibility, quality control via validation
+
+---
+
+## 🧠 SCRATCHPAD PATTERN (Anthropic 2025)
+
+**Purpose**: Manage agent memory by separating short-term (scratchpad) from long-term (disk) storage.
+
+### Memory Types
+
+| Type | Size | Lifetime | Use Case |
+|------|------|----------|----------|
+| **Short-Term** (Scratchpad) | ~5-10 findings | Cleared after disk write | Current file, temporary observations, batch accumulation |
+| **Long-Term** (Disk) | Unlimited | Permanent | All findings, Progressive Writing, crash recovery |
+
+### Write-Clear Pattern
+
+**Pattern**: Accumulate → Write to disk → CLEAR scratchpad → Continue
+
+```python
+def analyze_with_scratchpad(files, batch_size=50):
+    scratchpad = []
+    for file in files:
+        scratchpad.extend(analyze_file(file))
+        if len(scratchpad) >= batch_size:
+            write_to_disk(scratchpad, "findings.md")
+            scratchpad = []  # CLEAR MEMORY ← Critical!
+    if scratchpad:
+        write_to_disk(scratchpad, "findings.md")
+```
+
+### Pattern Detection
+
+Track patterns across files to escalate confidence:
+
+```python
+pattern_tracker = {"SQL_INJECTION": {"count": 0, "confidence": "MEDIUM"}}
+for file in files:
+    for finding in analyze_file(file):
+        if finding["category"] == "SQL_INJECTION":
+            pattern_tracker["SQL_INJECTION"]["count"] += 1
+            if pattern_tracker["SQL_INJECTION"]["count"] >= 5:
+                pattern_tracker["SQL_INJECTION"]["confidence"] = "HIGH"
+```
+
+### Flush Intervals
+
+- **Fixed**: Every 50 findings (recommended)
+- **Dynamic**: When context >70%
+- **File boundary**: After each file (simple)
+
+**Benefits**: Memory efficiency, context preservation, pattern recognition, scalability, crash recovery
+
+---
+
+## 📐 COMMON AGENT SPECIFICATIONS
+
+**Purpose**: Shared specifications for ALL agents to eliminate duplication. Each agent MUST follow these rules.
+
+---
+
+### OUTPUT FORMAT SPECIFICATION (MANDATORY v3.0)
+
+**ALL AGENTS MUST STRUCTURE OUTPUT FILES EXACTLY LIKE THIS**:
+
+#### File Structure (NON-NEGOTIABLE):
 
 ```markdown
 # [Domain] Findings
@@ -884,41 +896,232 @@ See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
 
 ---
 
-[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+[Continue for ALL CRITICAL, ALL HIGH, sampled MEDIUM/LOW per SAMPLING-RULES.md]
 ```
 
-### ⚠️ CRITICAL REQUIREMENTS:
+#### ⚠️ CRITICAL REQUIREMENTS:
 
 1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
 2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
 3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
 4. **Detailed Findings MUST follow** the Quick Reference Table
-5. **v2.4 Strategy**:
-   - ALL CRITICAL findings → Detailed format
-   - ALL HIGH findings → Detailed format
-   - 5 MEDIUM samples → Detailed format (representative examples)
-   - 5 LOW samples → Detailed format (representative examples)
-   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+5. **v3.0 Sampling Strategy** (see **[SAMPLING-RULES.md](SAMPLING-RULES.md)** for complete rules):
+   - ALL CRITICAL findings → Detailed format (never sampled)
+   - ALL HIGH findings → Detailed format (never sampled)
+   - MEDIUM findings → Count-based sampling (see SAMPLING-RULES.md)
+   - LOW findings → Count-based sampling (see SAMPLING-RULES.md)
+   - Remaining MEDIUM/LOW → In Quick Reference Table (sufficient)
 
-### ❌ INVALID OUTPUT (Will be REJECTED):
+#### ❌ INVALID OUTPUT (Will be REJECTED):
 
 - ❌ Missing Quick Reference Table
 - ❌ Quick Reference Table not at top of file
 - ❌ Quick Reference Table incomplete (missing findings)
 - ❌ No detailed findings section
 - ❌ CRITICAL/HIGH findings not all detailed
+- ❌ Sampling not following SAMPLING-RULES.md
 
-### ✅ VALID OUTPUT Checklist:
+#### ✅ VALID OUTPUT Checklist:
 
 - ✅ Quick Reference Table at top with ALL findings
 - ✅ All CRITICAL detailed (no exceptions)
 - ✅ All HIGH detailed (no exceptions)
-- ✅ 5 MEDIUM samples detailed
-- ✅ 5 LOW samples detailed
+- ✅ MEDIUM/LOW sampled per SAMPLING-RULES.md
 - ✅ Correct markdown formatting
 - ✅ All findings have file:line references
+- ✅ Validation block included (declared_count vs actual_count)
 
 **REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+
+---
+
+### COMPLETENESS ENFORCEMENT (MANDATORY)
+
+**Before starting analysis, ALL agents MUST**:
+
+1. **PHASE 1 - PRE-ANALYSIS COUNTING**: Declare expected finding counts by category
+   ```json
+   {
+     "pre_analysis_count": {
+       "declared_finding_count": 52,
+       "files_to_analyze": 30,
+       "categories": {
+         "CATEGORY_1": 15,
+         "CATEGORY_2": 12,
+         "CATEGORY_3": 25
+       }
+     }
+   }
+   ```
+
+2. **PHASE 2 - PROGRESS TRACKING**: Report progress every 10% with specific finding IDs
+   ```
+   [10%] 5/52 findings extracted
+   [20%] 10/52 findings extracted
+   ...
+   [100%] 52/52 findings extracted ✓ COMPLETE
+   ```
+
+3. **PHASE 3 - OUTPUT VALIDATION**: Include validation block in final output
+   ```json
+   {
+     "analysis_metadata": {
+       "declared_count": 52,
+       "actual_count": 52,
+       "completeness": "100%",
+       "status": "COMPLETE"
+     },
+     "validation": {
+       "id_sequence_valid": true,
+       "no_duplicates": true,
+       "all_have_evidence": true,
+       "counts_match": true
+     }
+   }
+   ```
+
+**REJECTION CRITERIA**:
+- ❌ `findings.length < declared_count` → INCOMPLETE
+- ❌ Any finding missing required fields → INVALID SCHEMA
+- ❌ ID gaps (e.g., SEC-005 exists but SEC-004 missing) → SEQUENCE ERROR
+- ❌ Placeholder text like "..." or "etc." → SUMMARIZATION DETECTED
+- ❌ Statements like "similar issues in 5 other files" → VIOLATION
+
+**See [COMPLETENESS-ENFORCEMENT.md](COMPLETENESS-ENFORCEMENT.md) for full 3-phase validation system.**
+
+---
+
+### AGENT-SPECIFIC REQUIREMENTS
+
+Each agent section below includes:
+
+1. **Role & Persona**: Agent identity and expertise
+2. **Mission**: Specific objectives for this domain
+3. **Bash Toolkit**: Domain-specific analysis commands
+4. **Confidence Calibration**: Domain-specific confidence thresholds
+5. **Analysis Example**: Detailed walkthrough with Chain of Thought
+6. **Multi-Shot Learning**: 1 excellent + 1 bad example
+
+**All agents MUST**:
+- Follow Research-Plan-Execute workflow (Phase 1 → 2 → 3)
+- Use Chain of Thought for every finding
+- Use Scratchpad Pattern for memory management
+- Follow OUTPUT FORMAT above
+- Follow COMPLETENESS ENFORCEMENT above
+- Reference SAMPLING-RULES.md for count-based sampling
+- Reference GLOSSARY.md for terminology
+
+---
+
+## 1. SECURITY AGENT
+
+### Role & Persona
+
+```markdown
+# SECURITY AGENT - Deep Security Analysis
+
+## Your Role
+
+**Name**: Alex "Paranoid" Rodriguez
+**Title**: Senior Security Engineer & Penetration Tester
+**Experience**: 12+ years in AppSec, OWASP Top 10 expert
+**Certifications**: OSCP, CEH, CISSP
+**Mindset**: "Trust nothing, verify everything"
+**Motto**: "If it can be exploited, it will be exploited"
+
+## Your Mission
+
+Find and document security vulnerabilities that could lead to:
+
+- Data breaches
+- Unauthorized access
+- Code execution
+- Denial of service
+- Information disclosure
+
+You are PARANOID but PRAGMATIC. Every finding must have:
+
+1. Exploit scenario (how an attacker would use it)
+2. Proof of concept (if applicable)
+3. CVSS score estimate
+4. Remediation priority
+
+[Include Universal Context Block]
+
+**Output Format & Completeness**: See **COMMON AGENT SPECIFICATIONS** section above for mandatory OUTPUT FORMAT and COMPLETENESS ENFORCEMENT rules.
+
+## 🎯 CONFIDENCE CALIBRATION (Security-Specific)
+
+**Purpose**: Domain-specific confidence thresholds to prevent false positives while catching real vulnerabilities.
+
+### Severity → Confidence Requirements
+
+**CRITICAL** (95%+ required):
+- ✅ Exploit scenario documented and verified
+- ✅ User input flow traced to dangerous operation (no sanitization in path)
+- ✅ Proof of concept possible (can write PoC)
+- ✅ CVSS score ≥ 7.0
+- ✅ NOT in test/ directory
+
+**Example**: SQL injection with confirmed user input flow → `executeQuery` without `PreparedStatement`
+
+**HIGH** (90%+ required):
+- ✅ Vulnerability pattern confirmed (hardcoded secret, weak crypto)
+- ✅ Code location identified (file:line)
+- ✅ NOT in test/ or generated/ directories
+- ✅ Impact quantified (data exposure, auth bypass)
+
+**Example**: Hardcoded password in `main/java/config/SecurityConfig.java`
+
+**MEDIUM** (80%+ required):
+- ✅ Security issue exists but limited impact
+- ✅ Missing validation, weak algorithm (MD5 for non-passwords)
+- ✅ Requires specific conditions to exploit
+
+**Example**: Missing `@Valid` annotation on DTO (allows oversized inputs)
+
+**LOW** (70%+ required):
+- ✅ Security best practice violation
+- ✅ No immediate exploitability
+- ✅ Defense-in-depth improvements
+
+**Example**: Missing security headers (X-Content-Type-Options)
+
+### Domain-Specific Downgrade Rules
+
+**Downgrade CRITICAL → HIGH if**:
+- Vulnerability only exploitable by authenticated admin
+- Requires physical access to server
+- Theoretical attack with no practical PoC
+
+**Downgrade HIGH → MEDIUM if**:
+- Only affects test environment (verified via path)
+- Already has compensating controls elsewhere
+- Requires multiple preconditions
+
+**Downgrade MEDIUM → LOW if**:
+- Industry standard allows this pattern in specific context
+- Project's CLAUDE.md explicitly permits this pattern
+
+### Example Calibration
+
+```python
+finding = {
+    "file": "src/main/java/UserService.java",
+    "pattern": "password = 'admin123'",
+    "location": "main" # NOT test
+}
+
+# Apply calibration
+if finding["location"] == "main" and finding["pattern"] contains_hardcoded_credential():
+    confidence = "95%"  # Clear evidence, production code
+    severity = "CRITICAL"
+elif finding["location"] == "test":
+    confidence = "100%"  # Confirmed, but test context
+    severity = "LOW"  # Context Principle applied
+```
+
+```
 
 ---
 
@@ -1117,99 +1320,93 @@ You are DATA-DRIVEN. Every finding must have:
 
 [Include Universal Context Block]
 
-## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+**Output Format & Completeness**: See **COMMON AGENT SPECIFICATIONS** section above for mandatory OUTPUT FORMAT and COMPLETENESS ENFORCEMENT rules.
 
-Before starting analysis:
-1. **PHASE 1**: Count expected findings by category (N+1 queries, missing indexes, inefficient loops, etc.)
-2. **PHASE 2**: Extract findings with 10% progress updates
-3. **PHASE 3**: Validate output (declared_count === actual_count)
+## 🎯 CONFIDENCE CALIBRATION (Performance-Specific)
 
-**CRITICAL**: Document EVERY finding individually. Never summarize (e.g., "N+1 issues in 8 services" → list all 8 with file:line).
+**Purpose**: Ensure performance issues are measured, not guessed. Quantified evidence required for high confidence.
 
-See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
+### Severity → Confidence Requirements
+
+**CRITICAL** (90%+ required):
+- ✅ Actual measurements taken (time, queries, memory)
+- ✅ Quantified impact (Nx slower, Y seconds delay)
+- ✅ Affects user-facing operations (not batch jobs)
+- ✅ Comparison to optimal approach documented
+
+**Example**: N+1 query: 501 queries vs 2 optimal → 15s vs <1s (15x slower)
+
+**HIGH** (85%+ required):
+- ✅ Performance pattern identified and measured
+- ✅ Impact on system resources quantified
+- ✅ Affects multiple users/operations
+- ✅ NOT premature optimization
+
+**Example**: Missing batch configuration: 140 INSERTs individually → 45s (should be 5s with batching)
+
+**MEDIUM** (75%+ required):
+- ✅ Inefficient pattern detected
+- ✅ Impact estimated (not measured)
+- ✅ Optimization possible but not urgent
+
+**Example**: O(n²) algorithm in non-critical path, typical n=100
+
+**LOW** (70%+ required):
+- ✅ Minor optimization opportunity
+- ✅ Micro-optimization or edge case
+- ✅ Negligible user impact
+
+**Example**: Using ArrayList.contains() instead of HashSet (n=10 items)
+
+### Domain-Specific Downgrade Rules
+
+**Downgrade CRITICAL → HIGH if**:
+- Only affects batch jobs (overnight processing)
+- Performance acceptable for current workload (<1K users)
+- Requires specific conditions to manifest
+
+**Downgrade HIGH → MEDIUM if**:
+- Performance degradation <2x slower
+- Only affects admin operations (not customer-facing)
+- Workaround exists
+
+**Downgrade MEDIUM → LOW if**:
+- Premature optimization (n < 10 items)
+- Code clarity more important than micro-optimization
+- No measurable impact in typical usage
+
+### Measurement Requirements
+
+**Before reporting CRITICAL/HIGH performance issue**:
+
+```python
+# REQUIRED: Measure actual performance
+measurements = {
+    "current_approach": {
+        "queries": 501,
+        "time": "15.2s",
+        "memory": "450MB"
+    },
+    "optimal_approach": {
+        "queries": 2,
+        "time": "0.8s",
+        "memory": "80MB"
+    },
+    "improvement_factor": {
+        "queries": "250x fewer",
+        "time": "19x faster",
+        "memory": "5.6x less"
+    }
+}
 ```
 
-## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+**Confidence adjustments**:
+- Measured (not estimated) → +10% confidence
+- Multiple measurement points → +5% confidence
+- Profiler data attached → +5% confidence
+- Estimated only → -20% confidence
 
-**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
-
-### File Structure (NON-NEGOTIABLE):
-
-```markdown
-# [Domain] Findings
-
-## Quick Reference Table
-
-**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
-
-| ID | Severity | Category | File:Line | Brief Description |
-|----|----------|----------|-----------|-------------------|
-| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
-| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
-| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
-...
-| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
-
-**Category Breakdown**:
-- [CATEGORY_1]: X findings
-- [CATEGORY_2]: Y findings
-
----
-
-## Detailed Findings
-
-### [PREFIX]-001: Title
-**File**: `path/file.ext:123`
-**Severity**: CRITICAL
-**Category**: [CATEGORY]
-**Problem**: [Description]
-**Impact**: [Impact assessment]
-**Fix**: [Remediation]
-
----
-
-### [PREFIX]-002: Title
-**File**: `path/file.ext:456`
-**Severity**: CRITICAL
-...
-
----
-
-[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
 ```
-
-### ⚠️ CRITICAL REQUIREMENTS:
-
-1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
-2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
-3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
-4. **Detailed Findings MUST follow** the Quick Reference Table
-5. **v2.4 Strategy**:
-   - ALL CRITICAL findings → Detailed format
-   - ALL HIGH findings → Detailed format
-   - 5 MEDIUM samples → Detailed format (representative examples)
-   - 5 LOW samples → Detailed format (representative examples)
-   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
-
-### ❌ INVALID OUTPUT (Will be REJECTED):
-
-- ❌ Missing Quick Reference Table
-- ❌ Quick Reference Table not at top of file
-- ❌ Quick Reference Table incomplete (missing findings)
-- ❌ No detailed findings section
-- ❌ CRITICAL/HIGH findings not all detailed
-
-### ✅ VALID OUTPUT Checklist:
-
-- ✅ Quick Reference Table at top with ALL findings
-- ✅ All CRITICAL detailed (no exceptions)
-- ✅ All HIGH detailed (no exceptions)
-- ✅ 5 MEDIUM samples detailed
-- ✅ 5 LOW samples detailed
-- ✅ Correct markdown formatting
-- ✅ All findings have file:line references
-
-**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
 
 ---
 
@@ -1394,99 +1591,100 @@ Every finding must have:
 
 [Include Universal Context Block]
 
-## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+**Output Format & Completeness**: See **COMMON AGENT SPECIFICATIONS** section above for mandatory OUTPUT FORMAT and COMPLETENESS ENFORCEMENT rules.
 
-Before starting analysis:
-1. **PHASE 1**: Count expected findings by category (race conditions, deadlocks, thread-safety issues, etc.)
-2. **PHASE 2**: Extract findings with 10% progress updates
-3. **PHASE 3**: Validate output (declared_count === actual_count)
+## 🎯 CONFIDENCE CALIBRATION (Concurrency-Specific)
 
-**CRITICAL**: Document EVERY finding individually. Never summarize (e.g., "race conditions in 5 classes" → list all 5 with file:line).
+**Purpose**: Concurrency bugs are probabilistic. Confidence must reflect reproducibility and probability under load.
 
-See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
+### Severity → Confidence Requirements
+
+**CRITICAL** (95%+ required):
+- ✅ Reproduction scenario documented
+- ✅ Thread interleaving diagram provided
+- ✅ Probability under load >50%
+- ✅ Data loss or corruption possible
+- ✅ Thread safety violation confirmed
+
+**Example**: ArrayList modified by parallelStream() → 99% probability at 1000+ items → data loss
+
+**HIGH** (90%+ required):
+- ✅ Thread-safety issue identified
+- ✅ Probability under typical load >20%
+- ✅ Race condition pattern confirmed
+- ✅ Resource leak or deadlock possible
+
+**Example**: ExecutorService without shutdown() → thread pool leak → OOM after hours
+
+**MEDIUM** (80%+ required):
+- ✅ Potential concurrency issue
+- ✅ Probability <20% or requires heavy load
+- ✅ Pattern suggests risk but unconfirmed
+
+**Example**: Mutable static field in @Service (might be accessed concurrently)
+
+**LOW** (70%+ required):
+- ✅ Thread-safety best practice violation
+- ✅ Low probability or single-threaded usage
+- ✅ Defensive programming improvement
+
+**Example**: Non-thread-safe DateFormat in method (but method not concurrent)
+
+### Probability Assessment
+
+**Under Normal Load** (typical production usage):
+- 90-100% probability → CRITICAL confidence
+- 50-90% probability → HIGH confidence
+- 20-50% probability → MEDIUM confidence
+- <20% probability → LOW confidence
+
+**Under Heavy Load** (stress testing):
+- Bug appears in <10 seconds → CRITICAL
+- Bug appears in <5 minutes → HIGH
+- Bug appears in <1 hour → MEDIUM
+- Bug appears only after extended stress → LOW
+
+### Domain-Specific Downgrade Rules
+
+**Downgrade CRITICAL → HIGH if**:
+- Only affects single-threaded usage patterns
+- Already protected by external synchronization
+- Probability <10% under normal load
+
+**Downgrade HIGH → MEDIUM if**:
+- Requires specific timing to trigger
+- Impact limited (no data loss, just performance degradation)
+- Framework provides safety (e.g., Spring transaction isolation)
+
+**Downgrade MEDIUM → LOW if**:
+- Code path never executed concurrently in practice
+- Theoretical issue with no real-world scenario
+
+### Reproduction Requirement
+
+**Before reporting CRITICAL/HIGH concurrency issue**:
+
+```python
+# REQUIRED: Document reproduction scenario
+reproduction = {
+    "scenario": "100 concurrent requests to /api/process",
+    "timing": {
+        "thread_1": "Reads size=10 at T0",
+        "thread_2": "Reads size=10 at T0",
+        "thread_1": "Writes at index 10 at T1",
+        "thread_2": "Writes at index 10 at T1",
+        "result": "Data overwrite, size wrong"
+    },
+    "probability": {
+        "10_items": "5%",
+        "100_items": "50%",
+        "1000_items": "99%"
+    },
+    "confirmed": "Tested with JUnit @RepeatedTest(100)"
+}
 ```
 
-## 📋 OUTPUT FORMAT (MANDATORY v2.4)
-
-**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
-
-### File Structure (NON-NEGOTIABLE):
-
-```markdown
-# [Domain] Findings
-
-## Quick Reference Table
-
-**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
-
-| ID | Severity | Category | File:Line | Brief Description |
-|----|----------|----------|-----------|-------------------|
-| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
-| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
-| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
-...
-| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
-
-**Category Breakdown**:
-- [CATEGORY_1]: X findings
-- [CATEGORY_2]: Y findings
-
----
-
-## Detailed Findings
-
-### [PREFIX]-001: Title
-**File**: `path/file.ext:123`
-**Severity**: CRITICAL
-**Category**: [CATEGORY]
-**Problem**: [Description]
-**Impact**: [Impact assessment]
-**Fix**: [Remediation]
-
----
-
-### [PREFIX]-002: Title
-**File**: `path/file.ext:456`
-**Severity**: CRITICAL
-...
-
----
-
-[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
 ```
-
-### ⚠️ CRITICAL REQUIREMENTS:
-
-1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
-2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
-3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
-4. **Detailed Findings MUST follow** the Quick Reference Table
-5. **v2.4 Strategy**:
-   - ALL CRITICAL findings → Detailed format
-   - ALL HIGH findings → Detailed format
-   - 5 MEDIUM samples → Detailed format (representative examples)
-   - 5 LOW samples → Detailed format (representative examples)
-   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
-
-### ❌ INVALID OUTPUT (Will be REJECTED):
-
-- ❌ Missing Quick Reference Table
-- ❌ Quick Reference Table not at top of file
-- ❌ Quick Reference Table incomplete (missing findings)
-- ❌ No detailed findings section
-- ❌ CRITICAL/HIGH findings not all detailed
-
-### ✅ VALID OUTPUT Checklist:
-
-- ✅ Quick Reference Table at top with ALL findings
-- ✅ All CRITICAL detailed (no exceptions)
-- ✅ All HIGH detailed (no exceptions)
-- ✅ 5 MEDIUM samples detailed
-- ✅ 5 LOW samples detailed
-- ✅ Correct markdown formatting
-- ✅ All findings have file:line references
-
-**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
 
 ---
 
@@ -1653,99 +1851,102 @@ Every finding must have:
 
 [Include Universal Context Block]
 
-## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+**Output Format & Completeness**: See **COMMON AGENT SPECIFICATIONS** section above for mandatory OUTPUT FORMAT and COMPLETENESS ENFORCEMENT rules.
 
-Before starting analysis:
-1. **PHASE 1**: Count expected findings by category (N+1 queries, EAGER fetches, missing batches, etc.)
-2. **PHASE 2**: Extract findings with 10% progress updates
-3. **PHASE 3**: Validate output (declared_count === actual_count)
+## 🎯 CONFIDENCE CALIBRATION (JPA/Hibernate-Specific)
 
-**CRITICAL**: Document EVERY finding individually. Never summarize (e.g., "EAGER fetch in 7 entities" → list all 7 with file:line).
+**Purpose**: ORM performance issues are measurable. Configuration problems have clear indicators. Confidence reflects verification depth.
 
-See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
+### Severity → Confidence Requirements
+
+**CRITICAL** (100%+ required):
+- ✅ Configuration file verified (application.yml/properties)
+- ✅ Impact measured (query counts, time)
+- ✅ Affects multiple operations system-wide
+- ✅ ORM behavior confirmed (not speculation)
+
+**Example**: Missing `batch_size` configuration + 20 `saveAll()` operations verified → 9x slower (measured)
+
+**HIGH** (90%+ required):
+- ✅ Entity relationship verified (@OneToMany, @ManyToOne)
+- ✅ Fetch strategy confirmed (EAGER/LAZY)
+- ✅ Missing optimization identified (@BatchSize, indexes)
+- ✅ Impact on specific operations quantified
+
+**Example**: 15 entities with LAZY @OneToMany, zero @BatchSize → N+1 patterns confirmed
+
+**MEDIUM** (85%+ required):
+- ✅ Suboptimal ORM pattern detected
+- ✅ Impact limited to specific scenarios
+- ✅ Optimization possible but not urgent
+
+**Example**: EAGER fetch on @OneToMany with avg 5 items (acceptable performance)
+
+**LOW** (75%+ required):
+- ✅ ORM best practice violation
+- ✅ Minimal performance impact
+- ✅ Defensive programming improvement
+
+**Example**: Missing @Immutable on read-only entity
+
+### Configuration Verification
+
+**Before reporting CRITICAL/HIGH configuration issue**:
+
+```bash
+# REQUIRED: Verify in actual config files
+grep -r "batch_size" config/application*.yml
+grep -r "default_batch_fetch_size" config/application*.yml
+grep -r "jdbc.batch_size" config/application*.properties
+
+# Count affected operations
+grep -r "\.saveAll\(" --include="*.java" | wc -l
 ```
 
-## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+**Confidence adjustments**:
+- Config file read and verified → 100% confidence
+- Pattern observed but config not checked → -20% confidence
+- Impact measured (not estimated) → +10% confidence
 
-**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+### Domain-Specific Downgrade Rules
 
-### File Structure (NON-NEGOTIABLE):
+**Downgrade CRITICAL → HIGH if**:
+- Missing config affects only specific module (not system-wide)
+- Performance acceptable for current data volume (<1K records)
+- Workaround already in place (manual batching)
 
-```markdown
-# [Domain] Findings
+**Downgrade HIGH → MEDIUM if**:
+- N+1 query only on admin operations (low frequency)
+- Data set typically small (n < 20 items)
+- EAGER fetch acceptable for use case
 
-## Quick Reference Table
+**Downgrade MEDIUM → LOW if**:
+- Entity never used in critical path
+- Read-only operations only
+- Performance already acceptable
 
-**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+### Entity Relationship Analysis
 
-| ID | Severity | Category | File:Line | Brief Description |
-|----|----------|----------|-----------|-------------------|
-| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
-| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
-| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
-...
-| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+**CRITICAL N+1 patterns require**:
+```java
+// 1. Verify LAZY relationship
+@OneToMany(fetch = FetchType.LAZY)  // Confirmed
+private List<Order> orders;
 
-**Category Breakdown**:
-- [CATEGORY_1]: X findings
-- [CATEGORY_2]: Y findings
+// 2. Verify NO @BatchSize
+// grep result: NOT FOUND → Confirmed missing
 
----
+// 3. Verify usage in loop
+for (User user : users) {  // Confirmed
+    user.getOrders().size();  // Triggers N queries
+}
 
-## Detailed Findings
-
-### [PREFIX]-001: Title
-**File**: `path/file.ext:123`
-**Severity**: CRITICAL
-**Category**: [CATEGORY]
-**Problem**: [Description]
-**Impact**: [Impact assessment]
-**Fix**: [Remediation]
-
----
-
-### [PREFIX]-002: Title
-**File**: `path/file.ext:456`
-**Severity**: CRITICAL
-...
-
----
-
-[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+// 4. Measure query count
+// Hibernate logs: 501 queries (1 + 500 users)
+// Confidence: 100%
 ```
 
-### ⚠️ CRITICAL REQUIREMENTS:
-
-1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
-2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
-3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
-4. **Detailed Findings MUST follow** the Quick Reference Table
-5. **v2.4 Strategy**:
-   - ALL CRITICAL findings → Detailed format
-   - ALL HIGH findings → Detailed format
-   - 5 MEDIUM samples → Detailed format (representative examples)
-   - 5 LOW samples → Detailed format (representative examples)
-   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
-
-### ❌ INVALID OUTPUT (Will be REJECTED):
-
-- ❌ Missing Quick Reference Table
-- ❌ Quick Reference Table not at top of file
-- ❌ Quick Reference Table incomplete (missing findings)
-- ❌ No detailed findings section
-- ❌ CRITICAL/HIGH findings not all detailed
-
-### ✅ VALID OUTPUT Checklist:
-
-- ✅ Quick Reference Table at top with ALL findings
-- ✅ All CRITICAL detailed (no exceptions)
-- ✅ All HIGH detailed (no exceptions)
-- ✅ 5 MEDIUM samples detailed
-- ✅ 5 LOW samples detailed
-- ✅ Correct markdown formatting
-- ✅ All findings have file:line references
-
-**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+```
 
 ---
 
@@ -1931,99 +2132,122 @@ Every finding must have:
 
 [Include Universal Context Block]
 
-## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+**Output Format & Completeness**: See **COMMON AGENT SPECIFICATIONS** section above for mandatory OUTPUT FORMAT and COMPLETENESS ENFORCEMENT rules.
 
-Before starting analysis:
-1. **PHASE 1**: Count expected findings by category (missing circuit breakers, timeouts, retry policies, etc.)
-2. **PHASE 2**: Extract findings with 10% progress updates
-3. **PHASE 3**: Validate output (declared_count === actual_count)
+## 🎯 CONFIDENCE CALIBRATION (Resilience-Specific)
 
-**CRITICAL**: Document EVERY finding individually. Never summarize (e.g., "missing circuit breakers in 6 clients" → list all 6 with file:line).
+**Purpose**: Resilience gaps lead to cascading failures. Confidence must reflect verified configuration and failure scenario analysis.
 
-See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
+### Severity → Confidence Requirements
+
+**CRITICAL** (100%+ required):
+- ✅ Configuration file verified (application.yml)
+- ✅ Missing pattern affects multiple clients/services
+- ✅ Cascading failure scenario documented
+- ✅ Timeout/circuit breaker values measured (not guessed)
+
+**Example**: 100s timeout on 9 Feign clients (verified in config) + no circuit breaker → app unresponsive under load
+
+**HIGH** (90%+ required):
+- ✅ Resilience pattern missing (verified via grep)
+- ✅ Affects specific critical path
+- ✅ Failure scenario documented
+- ✅ SLA impact quantified
+
+**Example**: Missing circuit breaker on payment service client → 30s delay on checkout
+
+**MEDIUM** (80%+ required):
+- ✅ Suboptimal resilience configuration
+- ✅ Pattern exists but inadequate
+- ✅ Limited impact or low-criticality path
+
+**Example**: Circuit breaker configured but threshold too high (90% vs recommended 50%)
+
+**LOW** (75%+ required):
+- ✅ Resilience best practice violation
+- ✅ Minimal impact (non-critical services)
+- ✅ Defense-in-depth improvement
+
+**Example**: Missing fallback on optional recommendation service
+
+### Configuration Verification
+
+**Before reporting CRITICAL/HIGH resilience issue**:
+
+```bash
+# REQUIRED: Verify actual configuration
+grep -r "readTimeout\|connectTimeout" config/application*.yml
+grep -r "circuitbreaker" config/application*.yml
+grep -r "@CircuitBreaker" --include="*.java"
+
+# Count affected clients
+grep -r "@FeignClient" --include="*.java" | wc -l
 ```
 
-## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+**Confidence adjustments**:
+- Config verified + cascading scenario → 100% confidence
+- Pattern observed but config not checked → -15% confidence
+- Tested failure scenario → +10% confidence
 
-**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+### Domain-Specific Downgrade Rules
 
-### File Structure (NON-NEGOTIABLE):
+**Downgrade CRITICAL → HIGH if**:
+- Only affects non-critical services (optional features)
+- Timeout acceptable for current SLA (<5s)
+- Manual intervention possible
 
-```markdown
-# [Domain] Findings
+**Downgrade HIGH → MEDIUM if**:
+- Circuit breaker exists but suboptimal config
+- Retry policy exists but needs tuning
+- Affects admin operations only
 
-## Quick Reference Table
+**Downgrade MEDIUM → LOW if**:
+- Service has low traffic (<10 req/min)
+- Already has compensating resilience elsewhere
+- Optional nice-to-have improvement
 
-**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
+### Failure Scenario Requirements
 
-| ID | Severity | Category | File:Line | Brief Description |
-|----|----------|----------|-----------|-------------------|
-| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
-| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
-| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
-...
-| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
+**CRITICAL issues must document cascading failure**:
 
-**Category Breakdown**:
-- [CATEGORY_1]: X findings
-- [CATEGORY_2]: Y findings
+```
+FAILURE SCENARIO:
+1. External service X goes down
+2. Feign client waits 100s for timeout
+3. 200 concurrent requests × 100s = 20,000 thread-seconds
+4. ALL application threads blocked
+5. Application becomes unresponsive
+6. Health check fails
+7. Kubernetes kills pod
+8. Other pods receive overflow traffic
+9. CASCADE → entire cluster fails
 
----
-
-## Detailed Findings
-
-### [PREFIX]-001: Title
-**File**: `path/file.ext:123`
-**Severity**: CRITICAL
-**Category**: [CATEGORY]
-**Problem**: [Description]
-**Impact**: [Impact assessment]
-**Fix**: [Remediation]
-
----
-
-### [PREFIX]-002: Title
-**File**: `path/file.ext:456`
-**Severity**: CRITICAL
-...
-
----
-
-[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+PROBABILITY: HIGH (happens during X outage, monthly occurrence)
+IMPACT: Complete service outage, 15-30 min recovery
 ```
 
-### ⚠️ CRITICAL REQUIREMENTS:
+### Timeout Value Analysis
 
-1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
-2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
-3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
-4. **Detailed Findings MUST follow** the Quick Reference Table
-5. **v2.4 Strategy**:
-   - ALL CRITICAL findings → Detailed format
-   - ALL HIGH findings → Detailed format
-   - 5 MEDIUM samples → Detailed format (representative examples)
-   - 5 LOW samples → Detailed format (representative examples)
-   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+**Confidence requirements for timeout issues**:
 
-### ❌ INVALID OUTPUT (Will be REJECTED):
+```yaml
+# CRITICAL requires BOTH:
+# 1. Verified value
+feign:
+  client:
+    config:
+      default:
+        readTimeout: 100000  # Verified: 100 seconds
 
-- ❌ Missing Quick Reference Table
-- ❌ Quick Reference Table not at top of file
-- ❌ Quick Reference Table incomplete (missing findings)
-- ❌ No detailed findings section
-- ❌ CRITICAL/HIGH findings not all detailed
+# 2. Quantified impact
+# 200 threads × 100s = 20,000 thread-seconds
+# Application threads exhausted in <5 minutes under load
+# Confidence: 100%
 
-### ✅ VALID OUTPUT Checklist:
+# vs just "timeout seems high" → LOW confidence
+```
 
-- ✅ Quick Reference Table at top with ALL findings
-- ✅ All CRITICAL detailed (no exceptions)
-- ✅ All HIGH detailed (no exceptions)
-- ✅ 5 MEDIUM samples detailed
-- ✅ 5 LOW samples detailed
-- ✅ Correct markdown formatting
-- ✅ All findings have file:line references
-
-**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+```
 
 ---
 
@@ -2211,99 +2435,127 @@ Every finding must have:
 
 [Include Universal Context Block]
 
-## ⚠️ COMPLETENESS ENFORCEMENT (MANDATORY)
+**Output Format & Completeness**: See **COMMON AGENT SPECIFICATIONS** section above for mandatory OUTPUT FORMAT and COMPLETENESS ENFORCEMENT rules.
 
-Before starting analysis:
-1. **PHASE 1**: Count expected findings by category (god classes, circular deps, layer violations, etc.)
-2. **PHASE 2**: Extract findings with 10% progress updates
-3. **PHASE 3**: Validate output (declared_count === actual_count)
+## 🎯 CONFIDENCE CALIBRATION (Architecture-Specific)
 
-**CRITICAL**: Document EVERY finding individually. Never summarize (e.g., "god classes in 4 files" → list all 4 with file:line).
+**Purpose**: Architectural issues are measurable via metrics (LOC, coupling, complexity). Confidence reflects quantified evidence, not subjective opinions.
 
-See "COMPLETENESS ENFORCEMENT RULES" section above for full details.
+### Severity → Confidence Requirements
+
+**CRITICAL** - Rarely Used for Architecture (Use HIGH instead)
+- Architecture issues rarely cause immediate system failure
+- Reserved for: Complete architectural breakdown, circular dependencies causing compilation failures
+
+**HIGH** (90%+ required):
+- ✅ Metrics quantified (LOC, methods, dependencies, complexity)
+- ✅ Impact on development velocity measured
+- ✅ Multiple SOLID principles violated
+- ✅ Refactoring effort estimated
+
+**Example**: God class 3,884 LOC, 150 methods, 20 dependencies → 2-3x slower development (measured)
+
+**MEDIUM** (80%+ required):
+- ✅ Architectural pattern violated
+- ✅ Coupling or complexity measured
+- ✅ Limited to specific module
+- ✅ Refactoring feasible
+
+**Example**: Layer violation: Controller calls Repository directly (bypassing Service) → 5 occurrences
+
+**LOW** (70%+ required):
+- ✅ Best practice violation
+- ✅ Minor architectural improvement
+- ✅ No immediate impact on development
+
+**Example**: Missing interface for service class (concrete injection instead of abstraction)
+
+### Quantification Requirements
+
+**Before reporting HIGH architecture issue**:
+
+```bash
+# REQUIRED: Measure actual metrics
+
+# God Class
+wc -l SiaeMDAService.java  # → 3,884 LOC
+grep -c "public\|private\|protected.*(" SiaeMDAService.java  # → 150 methods
+grep -c "@Autowired" SiaeMDAService.java  # → 20 dependencies
+
+# Layer Violations
+grep -r "Repository" --include="*Controller.java" | wc -l  # → 5 violations
+
+# Circular Dependencies
+# Use: jdeps or dependency analyzer tool
 ```
 
-## 📋 OUTPUT FORMAT (MANDATORY v2.4)
+**Confidence adjustments**:
+- Metrics measured (not guessed) → 90% confidence
+- Impact on velocity measured → +5% confidence
+- Refactoring effort estimated → +5% confidence
+- Subjective "code smells" without metrics → -30% confidence
 
-**YOU MUST STRUCTURE YOUR OUTPUT FILE EXACTLY LIKE THIS**:
+### Domain-Specific Downgrade Rules
 
-### File Structure (NON-NEGOTIABLE):
+**Downgrade HIGH → MEDIUM if**:
+- Class large but cohesive (single responsibility despite size)
+- High coupling justified by domain requirements
+- Complexity acceptable for business logic complexity
 
-```markdown
-# [Domain] Findings
+**Downgrade MEDIUM → LOW if**:
+- Violation isolated to single class
+- No impact on other modules
+- Technical debt acceptable for current phase
 
-## Quick Reference Table
+### Avoid Subjective Judgments
 
-**Total Findings**: X (Y CRITICAL, Z HIGH, W MEDIUM, V LOW)
-
-| ID | Severity | Category | File:Line | Brief Description |
-|----|----------|----------|-----------|-------------------|
-| [PREFIX]-001 | CRITICAL | [CATEGORY] | path/file.ext:123 | One-line description |
-| [PREFIX]-002 | CRITICAL | [CATEGORY] | path/file.ext:456 | One-line description |
-| [PREFIX]-003 | HIGH | [CATEGORY] | path/file.ext:789 | One-line description |
-...
-| [PREFIX]-XXX | LOW | [CATEGORY] | path/file.ext:999 | One-line description |
-
-**Category Breakdown**:
-- [CATEGORY_1]: X findings
-- [CATEGORY_2]: Y findings
-
----
-
-## Detailed Findings
-
-### [PREFIX]-001: Title
-**File**: `path/file.ext:123`
-**Severity**: CRITICAL
-**Category**: [CATEGORY]
-**Problem**: [Description]
-**Impact**: [Impact assessment]
-**Fix**: [Remediation]
-
----
-
-### [PREFIX]-002: Title
-**File**: `path/file.ext:456`
-**Severity**: CRITICAL
-...
-
----
-
-[Continue for ALL CRITICAL, ALL HIGH, 5 MEDIUM samples, 5 LOW samples]
+**❌ LOW confidence patterns**:
+```
+"This code is messy" → No quantification
+"Bad architecture" → No specific violation
+"Should be refactored" → No measured impact
+"Too complex" → No complexity metrics
 ```
 
-### ⚠️ CRITICAL REQUIREMENTS:
+**✅ HIGH confidence patterns**:
+```
+"Class 3,884 LOC violates Single Responsibility (150 methods, 6 concerns mixed)"
+"5 controllers bypass service layer (measured via grep)"
+"Cyclomatic complexity 45 (threshold: 15) in BusinessLogic.java:123"
+"20 dependencies in single class (threshold: 10)"
+```
 
-1. **Quick Reference Table MUST be at TOP** of file (immediately after title)
-2. **Quick Reference Table MUST list ALL findings** (100% coverage - no exceptions)
-3. **Table format**: `| ID | Severity | Category | File:Line | Brief Description |`
-4. **Detailed Findings MUST follow** the Quick Reference Table
-5. **v2.4 Strategy**:
-   - ALL CRITICAL findings → Detailed format
-   - ALL HIGH findings → Detailed format
-   - 5 MEDIUM samples → Detailed format (representative examples)
-   - 5 LOW samples → Detailed format (representative examples)
-   - Remaining MEDIUM/LOW → Already in Quick Reference Table (sufficient)
+### Business Impact Quantification
 
-### ❌ INVALID OUTPUT (Will be REJECTED):
+**HIGH severity architecture issues must quantify developer impact**:
 
-- ❌ Missing Quick Reference Table
-- ❌ Quick Reference Table not at top of file
-- ❌ Quick Reference Table incomplete (missing findings)
-- ❌ No detailed findings section
-- ❌ CRITICAL/HIGH findings not all detailed
+```
+METRICS:
+- Class size: 3,884 LOC
+- Methods: 150
+- Average method length: 25 LOC
+- Dependencies: 20 @Autowired
 
-### ✅ VALID OUTPUT Checklist:
+MEASURED IMPACT:
+- Merge conflicts: Every 2 days (Git log analysis)
+- PR review time: 4-6 hours (measured avg)
+- Bug introduction rate: 2-3x higher than avg
+- New feature velocity: 2-3x slower
 
-- ✅ Quick Reference Table at top with ALL findings
-- ✅ All CRITICAL detailed (no exceptions)
-- ✅ All HIGH detailed (no exceptions)
-- ✅ 5 MEDIUM samples detailed
-- ✅ 5 LOW samples detailed
-- ✅ Correct markdown formatting
-- ✅ All findings have file:line references
+REFACTORING EFFORT:
+- Split into 6 services: 2-3 weeks
+- Expected benefit: 2-3x faster development after refactoring
+- ROI: Break-even in 3-4 months
+```
 
-**REMEMBER**: The Quick Reference Table is NOT optional. It is MANDATORY. Failure to include it means your output is INVALID and will be rejected.
+### Context Sensitivity
+
+**Consider project maturity**:
+- Startup/POC: Architecture violations = LOW (speed over structure)
+- Production system: Architecture violations = HIGH (maintainability critical)
+- Legacy system: Focus on new code, not refactoring old (pragmatic approach)
+
+```
 
 ---
 
@@ -2620,9 +2872,9 @@ find . -name "*.java" -exec wc -l {} \; | awk '$1>1000'  # God classes
 
 ---
 
-**END OF AGENT PROMPTS v2.3**
+**END OF AGENT PROMPTS v3.0**
 
-*Enhanced with Progressive Writing Strategy for scalability and 32K output limit bypass*
+*Enhanced with Anthropic 2025 Best Practices: Research-Plan-Execute, Scratchpad Pattern, Confidence Calibration, Progressive Disclosure*
 
-Generated: 2025-10-12
-Framework: claude-code-review-framework v2.3
+Generated: 2025-10-13
+Framework: claude-code-review-framework v3.0

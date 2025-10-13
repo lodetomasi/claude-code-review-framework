@@ -1,51 +1,48 @@
-# FRAMEWORK RULES HIERARCHY v3.0
+# FRAMEWORK RULES HIERARCHY - AI CONFLICT RESOLUTION
 
-**Version**: 3.0
-**Date**: 2025-10-12
-**Framework**: claude-code-review-framework
-**Purpose**: Define priority order when framework rules conflict
-
----
-
-## 📚 READING CONTEXT
-
-**This document is referenced from**:
-- `UNIVERSAL-CONTEXT-MANAGEMENT.md` (Step 5.5/5.6)
-- `CLAUDE-ANALYSIS-FRAMEWORK.md` (Step 3)
-- `COMPLETENESS-ENFORCEMENT.md` (Step 5.4)
-
-**Why this document exists**: The framework v2.4 contained logical contradictions between rules. v3.0 introduces a **rule hierarchy** to resolve conflicts.
-
-🎯 **[→ GO TO START-HERE.md](START-HERE.md)** for the complete reading order.
+**Version**: 3.0 (AI-Optimized)
+**Mandatory Reading**: Step 6 in execution sequence
+**Last Updated**: 2025-10-13
 
 ---
 
-## ⚠️ THE PROBLEM (v2.4)
+## ⛔ ABSOLUTE PROHIBITIONS - HIERARCHY VIOLATIONS
 
-In framework v2.4, these rules conflicted:
+**VIOLATION = ANALYSIS INVALID - PRIORITY ORDER BROKEN**
 
-### Contradiction Example
-```
-COMPLETENESS-ENFORCEMENT.md says:
-"Document EVERY finding individually - NO summarization"
-
-UNIVERSAL-CONTEXT-MANAGEMENT.md says:
-"Progressive Compression: Second occurrence: Store location only"
-
-AGENT-PROMPTS.md says:
-"Keep 5 MEDIUM samples detailed (5 lines each)"
-```
-
-**Question**: If I find 80 MEDIUM findings, do I:
-- A) Document all 80 in detail? (COMPLETENESS)
-- B) Compress 75 of them? (CONTEXT MANAGEMENT)
-- C) Keep only 5 detailed? (OUTPUT STRATEGY)
-
-**v2.4 had no answer** → Agents couldn't follow all rules simultaneously.
+1. ❌ **FORBIDDEN** to prioritize Output Strategy (Priority 3) over Completeness (Priority 1)
+2. ❌ **FORBIDDEN** to skip findings due to context management constraints
+3. ❌ **FORBIDDEN** to confuse compression (temporary) with skipping (permanent)
+4. ❌ **FORBIDDEN** to apply sampling without justification (>500K LOC only)
+5. ❌ **FORBIDDEN** to compress CRITICAL or HIGH findings in final output
+6. ❌ **FORBIDDEN** to use "save context" as excuse for incomplete analysis
+7. ❌ **FORBIDDEN** to present <100% findings without Quick Reference Table
+8. ❌ **FORBIDDEN** to violate count-based rules for MEDIUM/LOW sampling
+9. ❌ **FORBIDDEN** to declare exact counts before analysis (use ranges)
+10. ❌ **FORBIDDEN** to proceed when rules conflict without consulting this hierarchy
 
 ---
 
-## ✅ THE SOLUTION (v3.0)
+## 🚨 FATAL ERRORS - HIERARCHY VIOLATIONS
+
+### FATAL-401: Priority Inversion
+- **Condition**: Output Strategy prioritized over Completeness
+- **Consequence**: Findings SKIPPED - analysis INCOMPLETE
+- **Recovery**: Re-analyze with Priority 1 (Completeness) first
+
+### FATAL-402: Compression Misunderstood as Skipping
+- **Condition**: Findings compressed in memory and never written to disk
+- **Consequence**: Findings LOST - analysis INVALID
+- **Recovery**: Write ALL findings to disk, apply sampling only in final output
+
+### FATAL-403: Unjustified Sampling
+- **Condition**: Sampling applied to codebase <500K LOC without Progressive Writing
+- **Consequence**: Analysis INCOMPLETE without valid reason
+- **Recovery**: Analyze 100% using Progressive Writing Strategy
+
+---
+
+## 📋 RULE HIERARCHY (PRIORITY ORDER)
 
 ### Rule Hierarchy
 
@@ -172,33 +169,14 @@ Output Strategy describes **HOW** to present the findings that were found and st
 
 #### v3.0 Unified Strategy (Count-Based)
 
-**CRITICAL findings**:
-- Rule: Keep ALL in detailed format
-- Reason: Immediate security/data corruption risks
-- Never sampled, never compressed in final output
+**For complete specification, see [SAMPLING-RULES.md](SAMPLING-RULES.md#-count-based-sampling-rules-v30)**
 
-**HIGH findings**:
-- Rule: Keep ALL in detailed format
-- Reason: Significant impact on system
-- Never sampled, never compressed in final output
+**Summary**:
 
-**MEDIUM findings** (count-based):
-```
-If < 20 total: Keep ALL detailed
-If 20-50 total: Keep top 10 detailed + Quick Reference Table
-If > 50 total: Keep top 5 detailed + Quick Reference Table
-
-Reason: Balance detail vs context usage
-```
-
-**LOW findings** (count-based):
-```
-If < 15 total: Keep ALL detailed
-If 15-40 total: Keep top 8 detailed + Quick Reference Table
-If > 40 total: Keep top 3 detailed + Quick Reference Table
-
-Reason: Provide representative samples + full index
-```
+- **CRITICAL findings**: ALL in detailed format (never sampled)
+- **HIGH findings**: ALL in detailed format (never sampled)
+- **MEDIUM findings**: Count-based (see SAMPLING-RULES.md)
+- **LOW findings**: Count-based (see SAMPLING-RULES.md)
 
 **Quick Reference Table**:
 ```markdown
@@ -415,35 +393,9 @@ LANGUAGE-PLUGINS.md (Language-Specific Patterns)
 
 ---
 
-## 🎓 KEY TAKEAWAYS
-
-1. **Hierarchy exists to RESOLVE conflicts**, not create restrictions
-2. **Completeness is about FINDING all**, not PRESENTING all in full detail
-3. **Context Management is a TECHNIQUE**, not an excuse to skip analysis
-4. **Output Strategy is PRESENTATION**, not discovery
-5. **v3.0 uses estimation ranges**, not impossible exact counts
-6. **All findings are documented** (detailed or in Quick Reference Table)
+**Version**: 3.0 (AI-Optimized)
+**Last Updated**: 2025-10-13
 
 ---
 
-## 📚 SEE ALSO
-
-- `START-HERE.md` - Framework reading order and decision points
-- `COMPLETENESS-ENFORCEMENT.md` - Full specification of completeness rules
-- `UNIVERSAL-CONTEXT-MANAGEMENT.md` - Context management techniques
-- `AGENT-PROMPTS.md` - Agent templates with integrated v3.0 rules
-- `CLAUDE-ANALYSIS-FRAMEWORK.md` - Overall 6-phase workflow
-
----
-
-## VERSION HISTORY
-
-**v3.0 (2025-10-12)**:
-- Initial creation of FRAMEWORK-RULES-HIERARCHY.md
-- Resolves 7 logical contradictions from v2.4
-- Defines 3-level priority hierarchy
-- Provides conflict resolution examples
-
----
-
-**Remember**: The hierarchy exists to make the framework **usable**, not restrictive. When in doubt, prioritize **finding all issues** (Priority 1) over **presentation concerns** (Priority 3).
+END OF HIERARCHY RULES

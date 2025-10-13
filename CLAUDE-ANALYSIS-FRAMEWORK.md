@@ -1,48 +1,50 @@
-# CLAUDE CODE ANALYSIS FRAMEWORK
-## Universal Deep-Dive Code Review System
+# CLAUDE CODE ANALYSIS FRAMEWORK - AI EXECUTION WORKFLOW
 
-**Version**: 3.0
-**Last Updated**: 2025-10-12
-**Purpose**: Programmatic, scalable code analysis framework that works with any repository size and programming language
-**Breaking Changes from v2.4**:
-- Pre-Analysis Counting → Estimation with confidence intervals
-- v2.4 Output Strategy → v3.0 Unified Strategy (count-based)
-- Removed contradictory "declared_count === actual_count" rule
+**Version**: 3.0 (AI-Optimized)
+**Mandatory Reading**: Step 4 in execution sequence
+**Last Updated**: 2025-10-13
 
 ---
 
-## ⚠️ FOR AI MODELS - READ THIS FIRST
+## ⛔ ABSOLUTE PROHIBITIONS - WORKFLOW EXECUTION
 
-**If you haven't read [START-HERE.md](START-HERE.md) yet**: Stop and read it first.
+**VIOLATION = WORKFLOW INVALID - ANALYSIS REJECTED**
 
-**Why**: START-HERE.md provides:
-- ✅ Mandatory reading order for all framework documents (this is Step 3)
-- ✅ Decision points for choosing analysis strategy (Standard vs Progressive Writing)
-- ✅ Critical rules that prevent common mistakes (completeness enforcement, anti-summarization)
-- ✅ Assessment checklist to determine if you need Progressive Writing
-
-**This document (CLAUDE-ANALYSIS-FRAMEWORK.md) is Step 3** in the reading order defined in START-HERE.md.
-
-**Proceeding without START-HERE.md will cause**: Wrong strategy selection, incomplete analysis, 32K token overflow.
-
-🎯 **[→ GO TO START-HERE.md NOW](START-HERE.md)** if you haven't read it yet.
+1. ❌ **FORBIDDEN** to skip Phase 1 Discovery (manifest generation mandatory)
+2. ❌ **FORBIDDEN** to skip Phase 2 Pattern Scanning (hotspot identification mandatory)
+3. ❌ **FORBIDDEN** to execute agents without Phase 0 briefing (completeness rules)
+4. ❌ **FORBIDDEN** to skip agent output validation (Phase 5 mandatory)
+5. ❌ **FORBIDDEN** to proceed without reading COMPLETENESS-ENFORCEMENT.md first
+6. ❌ **FORBIDDEN** to analyze code without semantic layer segmentation
+7. ❌ **FORBIDDEN** to skip deduplication in assembly phase
+8. ❌ **FORBIDDEN** to omit manifest.json in agent context
+9. ❌ **FORBIDDEN** to run agents sequentially when parallel execution possible
+10. ❌ **FORBIDDEN** to skip final validation before report generation
 
 ---
 
-## OVERVIEW
+## 🚨 FATAL ERRORS - WORKFLOW FAILURES
 
-This framework enables **line-by-line code analysis** of repositories of any size by using:
+### FATAL-301: Discovery Phase Skipped
+- **Condition**: Agents executed without manifest.json
+- **Consequence**: No architectural context - findings INCOMPLETE
+- **Recovery**: Run Phase 1 Discovery, generate manifest, re-execute agents
 
-1. **Semantic Segmentation** - Divide by architectural layers, not arbitrary chunks
-2. **Specialized Agents** - Parallel execution of domain-specific analyzers
-3. **Context Injection** - Maintain system awareness across agent boundaries
-4. **Pattern-Based Scanning** - Identify hotspots before deep analysis
-5. **Tiered Analysis** - Adaptive depth based on risk and complexity
-6. **Language Plugins** - Core patterns + language-specific extensions
-7. **Hash-Based Deduplication** - Canonical identification of duplicate findings
-8. **Dependency Graph Awareness** - Understand system-wide relationships
-9. **Cross-Cutting Concerns** - Agents that analyze multiple layers
-10. **Size-Based Routing** - Adaptive strategies for different file sizes
+### FATAL-302: Pattern Scanning Skipped
+- **Condition**: Deep analysis without hotspot pre-scan
+- **Consequence**: Inefficient analysis - may miss critical issues
+- **Recovery**: Run Phase 2 Pattern Scanning, prioritize hotspots
+
+### FATAL-303: Validation Phase Skipped
+- **Condition**: Agent outputs not validated against completeness rules
+- **Consequence**: Invalid findings - output cannot be trusted
+- **Recovery**: Run validation checks, reject invalid agent outputs
+
+---
+
+## FRAMEWORK CAPABILITIES
+
+**Semantic Segmentation** | **Specialized Agents** | **Pattern Scanning** | **Tiered Analysis** | **Language Plugins** | **Hash Deduplication** | **Dependency Graph** | **Size-Based Routing**
 
 ---
 
