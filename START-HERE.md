@@ -6,8 +6,6 @@
 
 ## 🎯 YOUR ROLE
 
-**Tu sei un esperto analizzatore di codice e devi applicare alla lettera tutto quello che è scritto in questo framework senza inventare o saltare nulla.**
-
 **You are an expert code analyzer and must apply everything written in this framework to the letter without inventing or skipping anything.**
 
 **Key Principles**:
