@@ -141,56 +141,13 @@ Example (FINAL OUTPUT per v3.0 Unified Strategy):
 
 ## 🔄 ADAPTIVE CHUNKING STRATEGY
 
-### SMART SEGMENTATION BASED ON SIZE
-
-**SMALL (<10K LOC)**: Single pass
-- Analyze everything in one go
-- Full details for all findings
-- No compression needed
-
-**MEDIUM (10-50K LOC)**: Layer-based chunks
-```
-Chunk 1: Entry points (Controllers/APIs)
-Chunk 2: Business logic (Services)
-Chunk 3: Data layer (Repositories)
-Chunk 4: Cross-cutting (Security/Logging)
-
-Between chunks: Compress and clear memory
-```
-
-**LARGE (50-100K LOC)**: Pattern-based chunks
-```
-Chunk 1: Security patterns (scan all files)
-Chunk 2: Performance patterns (scan all files)
-Chunk 3: Deep dive on hotspots only
-Chunk 4: Architecture analysis on core only
-
-Aggressive compression between chunks
-```
-
-**VERY LARGE (>100K LOC OR >100 findings OR context >80%)**: Progressive Writing with Full Analysis
-
-```
-Analyze 100% with Progressive Writing Strategy:
-- Write findings to disk every N findings (dynamic based on context - see SAMPLING-RULES.md)
-- Clear from memory after writing
-- Full coverage maintained via disk storage
-- No sampling during analysis
-
-See "Progressive Writing Strategy v3.0" section below
-```
-
-**EXTREMELY LARGE (>500K LOC)**: Strategic Sampling Mode
-```
-Sample minimum 40% strategically:
-- 100% of entry points (Controllers, APIs)
-- 80% of business logic (Services)
-- 40% of data layer (Repositories)
-- 100% of security-critical paths
-- 40% of utilities
-
-Report sampling confidence and coverage statistics
-```
+| Codebase Size | Strategy | Coverage | Technique |
+|---------------|----------|----------|-----------|
+| **<10K LOC** | Single pass | 100% | Analyze all, full details, no compression |
+| **10-50K LOC** | Layer-based chunks | 100% | Chunk by layer (Controllers→Services→DAOs→Cross-cutting), compress between |
+| **50-100K LOC** | Pattern-based chunks | 100% | Chunk by pattern (Security→Performance→Hotspots→Architecture), aggressive compression |
+| **>100K LOC or >100 findings** | Progressive Writing | 100% | Write to disk every N findings (dynamic), clear from memory, full coverage |
+| **>500K LOC** | Strategic Sampling | 40%+ | 100% entry points, 80% business logic, 40% data/utilities, report confidence |
 
 ---
 
@@ -245,40 +202,11 @@ ALWAYS CHECK:
 
 ## 🎯 CONTEXT-AWARE FINDING STORAGE
 
-### COMPRESSION FORMATS BY CONTEXT USAGE
-
-**FULL FORMAT (0-60% context)**:
-```json
-{
-  "id": "PERF-CRIT-001",
-  "type": "PERFORMANCE",
-  "severity": "CRITICAL",
-  "category": "N_PLUS_ONE",
-  "file": "OrderService.java",
-  "line": 234,
-  "evidence": "orders.forEach(o -> o.getItems().size())",
-  "description": "N+1 query loading items for each order",
-  "impact": "500 orders generate 501 queries",
-  "fix": "Use JOIN FETCH or batch loading",
-  "code_example": "@Query('SELECT o FROM Order o JOIN FETCH o.items')"
-}
-```
-
-**COMPRESSED FORMAT (60-80% context)**:
-```json
-{
-  "id": "PERF-C-001",
-  "pattern": "N+1",
-  "loc": "OrderService:234",
-  "impact": "501 queries for 500 orders",
-  "fix_ref": "JOIN_FETCH_PATTERN"
-}
-```
-
-**MINIMAL FORMAT (80-95% context)**:
-```
-PERF-C:OrderService:234:N+1:501q
-```
+| Context Usage | Format | Example |
+|---------------|--------|---------|
+| **0-60%** | Full | All fields (id, type, severity, category, file, line, evidence, description, impact, fix, code_example) |
+| **60-80%** | Compressed | Essential fields (id, pattern, loc, impact, fix_ref) |
+| **80-95%** | Minimal | String: `PERF-C:OrderService:234:N+1:501q` |
 
 ---
 
@@ -478,219 +406,20 @@ Reference: "Found N1-PATTERN at line 234"
 
 ## 🚀 PROGRESSIVE WRITING STRATEGY (v3.0)
 
-### Problem
+**Problem**: Large codebases generate 800+ findings → Output overflow (>32K token limit)
 
-Large codebases generate 800+ findings → Output overflow (>32K token limit)
+**Solution**: Write findings to disk during analysis (not at end) using write-clear-continue pattern
 
-### Solution
+**Implementation**:
+1. Launch agents in parallel → each writes to `{domain}_findings.md`
+2. Each agent: analyze files → accumulate batch → write to disk → clear from memory
+3. Dynamic write intervals (see SAMPLING-RULES.md): context <70%=50 findings, 70-85%=25, 85-95%=10, >95%=1
+4. After ALL findings written → apply v3.0 Unified Sampling (SAMPLING-RULES.md)
+5. Merge domain files → `CODE_REVIEW_REPORT_v3.0.md`
 
-**Write findings incrementally to disk during analysis, not at the end**
+**Benefits**: Peak context 50KB (vs 150KB crash), 800+ findings documented, 67% context savings
 
-### Implementation
-
-#### Phase 1: Category-Based Progressive Analysis
-
-Launch 4 agents in parallel, each writes to its own file:
-
-```bash
-Agent 1 → security_findings.md
-Agent 2 → performance_findings.md
-Agent 3 → concurrency_findings.md
-Agent 4 → architecture_findings.md
-```
-
-#### Phase 2: Incremental Writing Pattern (v3.0 - Dynamic Intervals)
-
-Each agent follows this pattern:
-
-```bash
-# Initialize file with header
-cat > security_findings.md <<'EOF'
-## Security Issues
-### CRITICAL Issues
-EOF
-
-# Analysis loop
-findings_batch=()
-count=0
-
-for file in all_files:
-    issues = analyze_file(file)
-    findings_batch.extend(issues)
-    count += len(issues)
-
-    # v3.0: Dynamic write interval based on context usage
-    # See SAMPLING-RULES.md for complete algorithm
-    context_usage = get_context_usage_percentage()
-    write_interval = calculate_write_interval(context_usage)  # Defined in SAMPLING-RULES.md
-
-    # FLUSH TO DISK when threshold reached
-    if count % write_interval == 0:
-        for finding in findings_batch:
-            write_to_file(finding)
-
-        # CLEAR from context (critical!)
-        findings_batch = []
-
-        print(f"[Progress] {count} findings written (interval: {write_interval})")
-
-# Write remaining
-for finding in findings_batch:
-    write_to_file(finding)
-```
-
-#### Phase 3: v3.0 Unified Output Strategy
-
-After writing ALL findings, apply count-based sampling:
-
-```python
-def apply_v3_unified_sampling(findings_file):
-    """
-    v3.0 Unified Output Strategy (Count-Based Sampling)
-
-    For complete rules, see: SAMPLING-RULES.md#-count-based-sampling-rules-v30
-    """
-
-    findings = read_all_findings(findings_file)
-
-    critical = filter(severity == 'CRITICAL')
-    high = filter(severity == 'HIGH')
-    medium = filter(severity == 'MEDIUM')
-    low = filter(severity == 'LOW')
-
-    # ALWAYS keep all CRITICAL + HIGH
-    output = []
-    output += critical  # ALL
-    output += high      # ALL
-
-    # MEDIUM: count-based rules
-    medium_sorted = sort_by_impact(medium)
-    if len(medium) < 20:
-        output += medium_sorted  # ALL
-    elif len(medium) <= 50:
-        output += medium_sorted[:10]  # Top 10
-        output.append(create_quick_ref_table(medium_sorted[10:]))
-    else:  # >50
-        output += medium_sorted[:5]   # Top 5
-        output.append(create_quick_ref_table(medium_sorted[5:]))
-
-    # LOW: count-based rules
-    low_sorted = sort_by_frequency(low)
-    if len(low) < 15:
-        output += low_sorted  # ALL
-    elif len(low) <= 40:
-        output += low_sorted[:8]   # Top 8
-        output.append(create_quick_ref_table(low_sorted[8:]))
-    else:  # >40
-        output += low_sorted[:3]   # Top 3
-        output.append(create_quick_ref_table(low_sorted[3:]))
-
-    # Overwrite file with final output
-    write_findings_file(findings_file, output)
-
-    return {
-        'critical': len(critical),
-        'high': len(high),
-        'medium_total': len(medium),
-        'medium_detailed': min(len(medium), 10 if len(medium) <= 50 else 5),
-        'low_total': len(low),
-        'low_detailed': min(len(low), 8 if len(low) <= 40 else 3)
-    }
-
-
-def create_quick_ref_table(findings):
-    """Create Quick Reference Table for non-detailed findings"""
-    return {
-        'type': 'QUICK_REFERENCE_TABLE',
-        'count': len(findings),
-        'format': 'markdown_table',
-        'columns': ['ID', 'File', 'Line', 'Pattern', 'Impact'],
-        'rows': [
-            [f.id, f.file, f.line, f.pattern, f.impact]
-            for f in findings
-        ]
-    }
-```
-
-#### Phase 4: Merge
-
-```bash
-cat security_findings.md \
-    performance_findings.md \
-    concurrency_findings.md \
-    architecture_findings.md \
-    > CODE_REVIEW_REPORT_v2.2.md
-```
-
-### Benefits (v3.0)
-
-| Metric | Without Progressive Write | With Progressive Write v3.0 |
-|--------|---------------------------|---------------------------|
-| Peak Context | 150KB (crash) | 50KB (safe) |
-| Output Size | >32K tokens (fails) | 28K tokens (success) |
-| Issues Found | 0 (crashed) | 800+ (found all) |
-| Issues Documented | 0 | 464 (v3.0 count-based) |
-| CRITICAL/HIGH | 0 | ALL (100%) |
-| MEDIUM | 0 | ALL if <20, else top samples |
-| LOW | 0 | ALL if <15, else top samples |
-| Context Savings | N/A | **67%** |
-
-### Example: Security Analysis (v3.0)
-
-```
-Files analyzed: 1,350 Java files
-Issues found: 250 total
-
-Batch 1 (files 1-100):     28 issues → Write to disk → Clear
-Batch 2 (files 101-200):   35 issues → Write to disk → Clear
-Batch 3 (files 201-300):   42 issues → Write to disk → Clear
-...
-Batch 13 (files 1201-1350): 18 issues → Write to disk → Clear
-
-Total written: 250 issues to security_findings.md
-
-Apply v3.0 Unified Sampling:
-- CRITICAL: 8 → Keep ALL (8) ✓
-- HIGH: 42 → Keep ALL (42) ✓
-- MEDIUM: 120 (>50) → Keep top 5 detailed + Quick Ref Table (115)
-- LOW: 80 (>40) → Keep top 3 detailed + Quick Ref Table (77)
-
-Final output:
-- Detailed findings: 8 + 42 + 5 + 3 = 58
-- Quick Reference entries: 115 + 77 = 192
-- Total documented: 250 (100% coverage)
-- Report size: ~18KB (optimized)
-```
-
-### Agent Instructions (v3.0)
-
-When implementing this, agents must:
-
-1. **Initialize output file** at start with header
-2. **Monitor context usage** continuously
-3. **Accumulate findings** in dynamic batches:
-   - Context <70%: batch of 50
-   - Context 70-85%: batch of 25
-   - Context 85-95%: batch of 10
-   - Context >95%: write immediately (batch of 1)
-4. **Write batch to file** when threshold reached
-5. **Clear batch from context** after writing
-6. **Continue analysis** with freed context
-7. **Apply v3.0 Unified Sampling** at the end (count-based rules)
-8. **Report statistics** (found, detailed, quick-ref counts)
-
-### Output Format
-
-Each finding written to file:
-
-```markdown
-### SEC-042: Weak MD5 Hashing
-**File**: `UserService.java:123`
-**Problem**: Using MD5 for password hashing
-**Fix**: Replace with BCrypt
-
----
-```
+**See EXAMPLES.md Example 2 for complete Progressive Writing walkthrough**
 
 ---
 
